@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFL Line Betting HQ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--card:#1a1d2e;--border:#1f2937;--text:#e0e0e0;--muted:#9ca3af;--dim:#6b7280;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hero{text-align:center;padding:40px 20px;max-width:700px}
+.hero h1{font-size:2.2rem;color:#fff;margin-bottom:8px;letter-spacing:-.5px}
+.hero h1 span{color:var(--amber)}
+.hero p{color:var(--muted);font-size:1rem;line-height:1.6;margin-bottom:40px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:700px;padding:0 20px}
+.card{background:var(--card);border-radius:14px;padding:28px 24px;border:1px solid var(--border);transition:all .25s;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:10px}
+.card:hover{border-color:var(--amber);transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.card .icon{font-size:2rem;margin-bottom:4px}
+.card h2{font-size:1.15rem;color:#fff;font-weight:600}
+.card p{font-size:.85rem;color:var(--muted);line-height:1.5}
+.card .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600;margin-top:6px;width:fit-content}
+.tag-playbook{background:#f59e0b20;color:var(--amber)}
+.tag-picks{background:#10b98120;color:var(--green)}
+.footer{margin-top:50px;text-align:center;color:var(--dim);font-size:.72rem;padding:20px;line-height:1.6}
+.footer a{color:var(--amber);text-decoration:none}
+.stats{display:flex;gap:24px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat .num{font-size:1.5rem;font-weight:700;color:var(--amber)}
+.stat .label{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+@media(max-width:600px){
+  .hero h1{font-size:1.5rem}
+  .hero p{font-size:.88rem;margin-bottom:24px}
+  .cards{grid-template-columns:1fr;gap:14px}
+  .card{padding:20px 18px}
+  .card h2{font-size:1.05rem}
+  .stats{gap:16px}
+  .stat .num{font-size:1.2rem}
+}
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>AFL <span>Line Betting</span> HQ</h1>
+  <p>Backtested strategies and live game scanner for profitable AFL line betting. 29 strategies tested across 1,224 games from 2020–2025.</p>
+  <div class="stats">
+    <div class="stat"><div class="num">29</div><div class="label">Strategies</div></div>
+    <div class="stat"><div class="num">1,224</div><div class="label">Games Tested</div></div>
+    <div class="stat"><div class="num">6</div><div class="label">Seasons</div></div>
+    <div class="stat"><div class="num">22</div><div class="label">Profitable</div></div>
+  </div>
+</div>
+
+<div class="cards">
+  <a class="card" href="afl_strategy_playbook.html">
+    <div class="icon">📊</div>
+    <h2>Strategy Playbook</h2>
+    <p>Full backtest results, ROI charts, cumulative profit curves, yearly breakdowns and complete bet logs for all 29 strategies.</p>
+    <span class="tag tag-playbook">2020–2025 Backtest</span>
+  </a>
+  <a class="card" href="afl_picks_dashboard.html">
+    <div class="icon">🎯</div>
+    <h2>2026 Picks Scanner</h2>
+    <p>Live strategy triggers for every game this season. Squiggle predicted lines, bookmaker odds, team form and manual evaluator.</p>
+    <span class="tag tag-picks">Live Season</span>
+  </a>
+</div>
+
+<div class="footer">
+  Built with Python, Chart.js &amp; historical data from AusSportsBetting<br>
+  Not financial advice — gamble responsibly
+</div>
+</body>
+</html>
