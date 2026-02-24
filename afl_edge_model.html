@@ -149,8 +149,11 @@ tbody tr:last-child td { border-bottom:none; }
         <div class="filters">
             <div class="filter-group"><label>Round:</label><select id="filter-round" onchange="renderPredictions()"></select></div>
         </div>
-        <div class="info-box">
-            <strong>Enter bookmaker lines</strong> from TAB / Sportsbet / bet365 below. Click any game row to see detailed analysis.
+        <div class="info-box" style="font-size:12px;line-height:1.6;color:var(--text-dim)">
+            <strong style="color:var(--text)">How it works:</strong> Our Ridge + LightGBM ensemble predicts a margin for every game. 
+            Click <strong style="color:var(--accent)">Pull TAB Lines</strong> to fetch live bookmaker odds, or enter them manually. 
+            The <strong style="color:var(--green)">Pick column</strong> shows where our model disagrees with the market — the wider the green bar, the bigger the edge. 
+            Click any row for a full breakdown.
         </div>
         <div class="table-wrap">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0">
@@ -170,9 +173,10 @@ tbody tr:last-child td { border-bottom:none; }
 
     <!-- VALUE PICKS -->
     <div id="panel-value" class="panel">
-        <div class="info-box">
-            Value picks require bookmaker lines. Enter lines on the <strong>Round Predictions</strong> tab first, then return here.
-            The model looks for games where our predicted margin differs from the bookmaker line by 4+ points.
+        <div class="info-box" style="font-size:12px;line-height:1.6;color:var(--text-dim)">
+            <strong style="color:var(--text)">Reading value picks:</strong> These are games where our model's predicted margin differs significantly from the TAB line. 
+            A larger edge means the market may be mispricing the game. Edges of <strong>6+ points</strong> are strong signals; 
+            <strong>10+</strong> are rare but historically the most profitable to back.
         </div>
         <div class="filters">
             <div class="filter-group">
@@ -199,6 +203,11 @@ tbody tr:last-child td { border-bottom:none; }
 
     <!-- ELO -->
     <div id="panel-elo" class="panel">
+        <div class="info-box" style="font-size:12px;line-height:1.6;color:var(--text-dim)">
+            <strong style="color:var(--text)">About Elo:</strong> Each team starts at 1500 and gains/loses points based on match results relative to expectations. 
+            Ratings carry across seasons with 40% regression to the mean. Higher-rated teams are expected to win — 
+            the gap between two teams' Elo translates directly into a predicted margin in the model.
+        </div>
         <div id="elo-kpis" class="kpi-row"></div>
         <div class="chart-grid">
             <div class="chart-box full"><h3>Current Elo Ratings</h3><canvas id="eloChart"></canvas></div>
@@ -211,10 +220,11 @@ tbody tr:last-child td { border-bottom:none; }
 
     <!-- PLAYERS -->
     <div id="panel-players" class="panel">
-        <div class="info-box" style="font-size:12px; line-height:1.6;">
-            <strong>How are players rated?</strong> Official AFL rating_points (via Fryzigg) weighted by recency (2025×3, 2024×2.5, 2023×2) (2025 &times;3, 2024 &times;2.5, 2023 &times;2, 2022 &times;1.5).
-            This is the official AFL player rating metric that values all positions (mids, forwards, defenders, rucks) without positional bias.
-            Normalised 0&ndash;100 across all AFL players (not per-team). Min 5 games, 2024+ active.
+        <div class="info-box" style="font-size:12px;line-height:1.6;color:var(--text-dim)">
+            <strong style="color:var(--text)">Player ratings &amp; team selection:</strong> Ratings are AFL official rating_points (via Fryzigg) weighted by recency. 
+            Use this tab to gauge the impact of weekly team changes — if a top-rated player is dropped or injured, 
+            the team's overall strength drops and the model's predicted margin should be adjusted. 
+            Once team sheets are announced each week, we'll recalculate edges based on actual lineups.
         </div>
         <div class="filters">
             <div class="filter-group"><label>Team:</label><select id="filter-player-team" onchange="renderPlayers()"></select></div>

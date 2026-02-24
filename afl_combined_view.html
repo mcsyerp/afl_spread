@@ -124,10 +124,12 @@ tbody tr:last-child td { border-bottom:none; }
     </div>
 </nav>
 <div class="container">
-    <div class="info-box">
-        <strong>Combined Confidence View</strong> &mdash; Games are tiered by how many models flag value.
-        <strong>Dual Signal</strong> = both the edge model AND a historical strategy agree &rarr; highest conviction.
-        Strategies marked <em>partial</em> need form/break data (available from Round 2).
+    <div class="info-box" style="font-size:12px;line-height:1.7;color:var(--text-dim)">
+        <strong style="color:var(--text)">How to use this page:</strong> Games are ranked by confidence tier based on how many models agree.<br>
+        <span style="color:var(--accent)">● Dual Signal</span> — Both the statistical model <em>and</em> a backtested pattern strategy point to the same bet. These are your highest-conviction selections.<br>
+        <span style="color:var(--green)">● Edge Only</span> — The model finds value but no historical pattern confirms it. Still worth considering, especially on large edges (8+ pts).<br>
+        <span style="color:var(--amber)">● Strategy Only</span> — A pattern triggers but the model doesn't see enough edge. Treat as lower confidence.<br>
+        Click any row to see the full breakdown of which strategies triggered and why.
     </div>
 
     <div class="filters">

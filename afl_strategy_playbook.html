@@ -146,6 +146,10 @@ tr.clickable:hover td{background:#2a2d45}
     <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
     Opening Round — Strategy Signals
   </h3>
+  <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5">
+    Strategies that can be fully evaluated with current data are shown below. Games with multiple triggered strategies have historically been more profitable. 
+    Strategies requiring form data or break days will activate from Round 2 onwards.
+  </p>
   <div id="thisRoundGames"></div>
 </div>
 
@@ -179,18 +183,25 @@ tr.clickable:hover td{background:#2a2d45}
 
 <div class="grids">
   <div class="section"><h3>ROI by Strategy</h3>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Green bars = profitable. Taller bars = better returns per dollar staked.</p>
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="roiSortBar">
       <button class="roi-sort-btn active" data-sort="asc" onclick="setRoiSort('asc')">ROI Ascending</button>
       <button class="roi-sort-btn" data-sort="desc" onclick="setRoiSort('desc')">ROI Descending</button>
       <button class="roi-sort-btn" data-sort="group" onclick="setRoiSort('group')">Group by Category</button>
     </div>
     <div style="position:relative"><canvas id="roiChart"></canvas></div></div>
-  <div class="section"><h3>Strike Rate vs Profit (bubble = sample size)</h3><canvas id="scatterChart" height="260"></canvas></div>
+  <div class="section"><h3>Strike Rate vs Profit (bubble = sample size)</h3>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Top-right quadrant = high strike rate and high profit. Bigger bubbles = more bets, so more statistically reliable.</p><canvas id="scatterChart" height="260"></canvas></div>
 </div>
 <div class="section"><h3>Profit by Category</h3><canvas id="catChart" height="180"></canvas></div>
 
 <div class="section">
 <h3>All Strategies — 2020–2025 ($1,000 stakes)</h3>
+<p style="font-size:12px;color:var(--text-dim);margin:8px 0 12px;line-height:1.5;padding:0 4px">
+  Click any strategy row to see its full bet log. Sort by ROI% to find the most profitable patterns. 
+  Strategies with higher strike rates and positive ROI across multiple years are the most reliable. 
+  Combine these signals with the Edge Model for strongest conviction.
+</p>
 <table id="tbl">
   <thead><tr>
     <th data-c="name">Strategy</th>
