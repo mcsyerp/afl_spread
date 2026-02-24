@@ -6,33 +6,39 @@
 <title>AFL Line Betting HQ</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0f1117;--card:#1a1d2e;--border:#1f2937;--text:#e0e0e0;--muted:#9ca3af;--dim:#6b7280;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.hero{text-align:center;padding:40px 20px;max-width:700px}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--text-dim:#8b949e;--dim:#6b7280;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--amber:#f59e0b}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+.hero{text-align:center;max-width:760px;margin-bottom:40px}
 .hero h1{font-size:2.2rem;color:#fff;margin-bottom:8px;letter-spacing:-.5px}
-.hero h1 span{color:var(--amber)}
-.hero p{color:var(--muted);font-size:1rem;line-height:1.6;margin-bottom:40px}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:700px;padding:0 20px}
-.card{background:var(--card);border-radius:14px;padding:28px 24px;border:1px solid var(--border);transition:all .25s;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:10px}
-.card:hover{border-color:var(--amber);transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
-.card .icon{font-size:2rem;margin-bottom:4px}
-.card h2{font-size:1.15rem;color:#fff;font-weight:600}
-.card p{font-size:.85rem;color:var(--muted);line-height:1.5}
-.card .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600;margin-top:6px;width:fit-content}
-.tag-playbook{background:#f59e0b20;color:var(--amber)}
-.tag-picks{background:#10b98120;color:var(--green)}
-.footer{margin-top:50px;text-align:center;color:var(--dim);font-size:.72rem;padding:20px;line-height:1.6}
-.footer a{color:var(--amber);text-decoration:none}
-.stats{display:flex;gap:24px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--text-dim);font-size:1rem;line-height:1.6;margin-bottom:32px}
+.stats{display:flex;gap:28px;justify-content:center;flex-wrap:wrap}
 .stat{text-align:center}
-.stat .num{font-size:1.5rem;font-weight:700;color:var(--amber)}
+.stat .num{font-size:1.5rem;font-weight:700;color:var(--accent)}
 .stat .label{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
-@media(max-width:600px){
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;width:100%;max-width:900px;margin-bottom:24px}
+.card{background:var(--card);border-radius:12px;padding:28px 24px;border:1px solid var(--border);transition:all .25s;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:10px}
+.card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.card h2{font-size:1.1rem;color:#fff;font-weight:600}
+.card p{font-size:.82rem;color:var(--text-dim);line-height:1.5;flex:1}
+.card .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:600;margin-top:6px;width:fit-content}
+.tag-edge{background:rgba(63,185,80,0.15);color:var(--green)}
+.tag-strat{background:rgba(245,158,11,0.15);color:var(--amber)}
+.tag-combined{background:rgba(88,166,255,0.15);color:var(--accent)}
+.tag-legacy{background:rgba(139,148,158,0.15);color:var(--text-dim)}
+.card.featured{border-color:rgba(88,166,255,0.3);background:linear-gradient(135deg,var(--card) 0%,rgba(88,166,255,0.04) 100%)}
+
+.section-label{width:100%;max-width:900px;font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:12px 0 8px;padding-left:4px}
+.legacy-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;width:100%;max-width:900px}
+
+.footer{margin-top:40px;text-align:center;color:var(--dim);font-size:.72rem;line-height:1.6}
+
+@media(max-width:700px){
   .hero h1{font-size:1.5rem}
   .hero p{font-size:.88rem;margin-bottom:24px}
-  .cards{grid-template-columns:1fr;gap:14px}
+  .cards,.legacy-cards{grid-template-columns:1fr;gap:12px}
   .card{padding:20px 18px}
-  .card h2{font-size:1.05rem}
   .stats{gap:16px}
   .stat .num{font-size:1.2rem}
 }
@@ -41,32 +47,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <body>
 <div class="hero">
   <h1>AFL <span>Line Betting</span> HQ</h1>
-  <p>Backtested strategies and live game scanner for profitable AFL line betting. 29 strategies tested across 1,224 games from 2020–2025.</p>
+  <p>Ridge + LightGBM ensemble model, Elo ratings, player strength analysis, and 18 backtested strategies — combined into a multi-model betting system for the 2026 AFL season.</p>
   <div class="stats">
-    <div class="stat"><div class="num">29</div><div class="label">Strategies</div></div>
-    <div class="stat"><div class="num">1,224</div><div class="label">Games Tested</div></div>
-    <div class="stat"><div class="num">6</div><div class="label">Seasons</div></div>
-    <div class="stat"><div class="num">22</div><div class="label">Profitable</div></div>
+    <div class="stat"><div class="num">2</div><div class="label">Models</div></div>
+    <div class="stat"><div class="num">18</div><div class="label">Strategies</div></div>
+    <div class="stat"><div class="num">1,000+</div><div class="label">Games Backtested</div></div>
+    <div class="stat"><div class="num">207</div><div class="label">2026 Predictions</div></div>
   </div>
 </div>
 
 <div class="cards">
+  <a class="card" href="afl_edge_model.html">
+    <h2>Edge Model</h2>
+    <p>Ensemble line predictions, TAB odds comparison, Elo rankings, and player ratings. Pull live TAB lines and find value picks.</p>
+    <span class="tag tag-edge">Statistical Model</span>
+  </a>
   <a class="card" href="afl_strategy_playbook.html">
-    <div class="icon">📊</div>
     <h2>Strategy Playbook</h2>
-    <p>Full backtest results, ROI charts, cumulative profit curves, yearly breakdowns and complete bet logs for all 29 strategies.</p>
-    <span class="tag tag-playbook">2020–2025 Backtest</span>
+    <p>18 backtested betting strategies with ROI charts, profit curves, and this round's triggered signals.</p>
+    <span class="tag tag-strat">Pattern Strategies</span>
+  </a>
+  <a class="card featured" href="afl_combined_view.html">
+    <h2>Combined View</h2>
+    <p>Confidence tiers combining both models. Dual Signal picks where statistical edge and historical patterns agree.</p>
+    <span class="tag tag-combined">Recommended</span>
+  </a>
+</div>
+
+<div class="section-label">Archives</div>
+<div class="legacy-cards">
+  <a class="card" href="afl_line_predictor.html">
+    <h2>Line Predictor (v1)</h2>
+    <p>Original predictor dashboard with 5 tabs including backtest.</p>
+    <span class="tag tag-legacy">Superseded</span>
   </a>
   <a class="card" href="afl_picks_dashboard.html">
-    <div class="icon">🎯</div>
-    <h2>2026 Picks Scanner</h2>
-    <p>Live strategy triggers for every game this season. Squiggle predicted lines, bookmaker odds, team form and manual evaluator.</p>
-    <span class="tag tag-picks">Live Season</span>
+    <h2>Picks Scanner (v1)</h2>
+    <p>Strategy trigger scanner with Squiggle lines and manual evaluator.</p>
+    <span class="tag tag-legacy">Superseded</span>
+  </a>
+  <a class="card" href="afl_line_drilldown.html">
+    <h2>Line Drilldown</h2>
+    <p>Deep-dive analysis of line betting patterns and market behaviour.</p>
+    <span class="tag tag-legacy">Reference</span>
   </a>
 </div>
 
 <div class="footer">
-  Built with Python, Chart.js &amp; historical data from AusSportsBetting<br>
+  Built with Python, Ridge Regression, LightGBM, Chart.js &amp; historical data from AusSportsBetting &amp; Fryzigg<br>
   Not financial advice — gamble responsibly
 </div>
 </body>
