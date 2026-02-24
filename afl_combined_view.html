@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFL Combined View 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
+<style>
+:root {
+    --bg: #0d1117; --bg-card: #161b22; --bg-card-hover: #1c2333; --border: #30363d;
+    --text: #c9d1d9; --text-dim: #8b949e; --accent: #58a6ff; --green: #3fb950;
+    --red: #f85149; --amber: #f59e0b; --gap: 16px; --radius: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+.container { max-width:1400px; margin:0 auto; padding:var(--gap); }
+
+/* Nav */
+.nav-bar { background:linear-gradient(135deg, #1a1f35 0%, #0d1117 100%); border-bottom:1px solid var(--border); padding:14px 0; position:sticky; top:0; z-index:100; }
+.nav-inner { max-width:1400px; margin:0 auto; padding:0 var(--gap); display:flex; justify-content:space-between; align-items:center; gap:24px; flex-wrap:wrap; }
+.nav-brand { font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; }
+.nav-links { display:flex; gap:8px; }
+.nav-link { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; color:var(--text-dim); text-decoration:none; transition:all 0.2s; }
+.nav-link:hover { color:var(--text); background:rgba(255,255,255,0.05); }
+.nav-link.active { color:var(--accent); background:rgba(88,166,255,0.1); }
+.nav-meta { font-size:12px; color:var(--text-dim); white-space:nowrap; }
+
+/* KPIs */
+.kpi-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:var(--gap); margin-bottom:var(--gap); }
+.kpi { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; }
+.kpi-label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
+.kpi-value { font-size:26px; font-weight:700; }
+.kpi-sub { font-size:12px; color:var(--text-dim); margin-top:2px; }
+
+/* Filters */
+.filters { display:flex; gap:12px; margin-bottom:var(--gap); flex-wrap:wrap; align-items:center; }
+.filter-group { display:flex; align-items:center; gap:6px; }
+.filter-group label { font-size:12px; color:var(--text-dim); }
+.filter-group select { padding:7px 12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text); font-size:13px; cursor:pointer; }
+
+/* Tier filter buttons */
+.tier-filters { display:flex; gap:6px; margin-bottom:var(--gap); flex-wrap:wrap; }
+.tier-btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dim); transition:all 0.2s; }
+.tier-btn:hover { background:var(--bg-card-hover); color:var(--text); }
+.tier-btn.active { border-color:var(--accent); color:var(--text); background:rgba(88,166,255,0.08); }
+.tier-btn .count { font-size:11px; opacity:0.7; margin-left:4px; }
+
+/* Table */
+.table-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto; margin-bottom:var(--gap); }
+.table-wrap h3 { font-size:14px; font-weight:600; padding:16px 20px 0; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { text-align:left; padding:10px 14px; border-bottom:2px solid var(--border); color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; position:sticky; top:0; background:var(--bg-card); }
+tbody td { padding:10px 14px; border-bottom:1px solid rgba(48,54,61,0.5); }
+tbody tr:last-child td { border-bottom:none; }
+
+/* Tier row styling */
+.tier-row { cursor:pointer; transition:background 0.15s; }
+.tier-row:hover { background:var(--bg-card-hover) !important; }
+.tier-dual { border-left:4px solid var(--accent); background:rgba(88,166,255,0.04); }
+.tier-edge { border-left:4px solid var(--green); }
+.tier-strategy { border-left:4px solid var(--amber); }
+
+/* Tier badges */
+.tier-badge { display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:700; letter-spacing:0.3px; }
+.tier-badge.dual { background:rgba(88,166,255,0.15); color:var(--accent); }
+.tier-badge.edge { background:rgba(63,185,80,0.15); color:var(--green); }
+.tier-badge.strategy { background:rgba(245,158,11,0.15); color:var(--amber); }
+
+/* Strategy tags */
+.strat-tags { display:flex; gap:4px; flex-wrap:wrap; }
+.strat-tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; background:rgba(255,255,255,0.06); color:var(--text-dim); white-space:nowrap; }
+.strat-tag.active { background:rgba(245,158,11,0.12); color:var(--amber); }
+.strat-tag.partial { background:rgba(255,255,255,0.04); color:var(--text-dim); font-style:italic; opacity:0.7; }
+
+/* Pick cell (reused from edge model) */
+.pick-cell { position:relative; overflow:hidden; padding:0 !important; }
+.pick-bar { position:absolute; left:0; top:0; bottom:0; border-radius:3px; }
+.pick-content { position:relative; z-index:1; padding:10px 14px; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.pick-abbr { font-weight:800; font-size:14px; letter-spacing:0.5px; }
+.pick-line { font-weight:600; font-size:13px; }
+.pick-edge { font-size:11px; opacity:0.7; margin-left:auto; }
+
+/* Info box */
+.info-box { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius); padding:14px 20px; margin-bottom:var(--gap); font-size:13px; color:var(--text-dim); line-height:1.6; }
+.info-box strong { color:var(--text); }
+
+/* Game detail panel */
+.game-detail { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:var(--gap); overflow:hidden; }
+.game-detail.hidden { display:none; }
+.game-detail-header { padding:20px 24px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+.game-detail-header h3 { font-size:16px; font-weight:700; }
+.close-detail { background:none; border:1px solid var(--border); border-radius:6px; color:var(--text-dim); padding:4px 12px; cursor:pointer; font-size:12px; }
+.close-detail:hover { color:var(--text); border-color:var(--text-dim); }
+.game-detail-body { padding:20px 24px; }
+.detail-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:16px; }
+.detail-stat { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px 14px; text-align:center; }
+.detail-stat .stat-label { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+.detail-stat .stat-value { font-size:20px; font-weight:700; }
+.strat-detail-list { margin-top:16px; }
+.strat-detail-item { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:8px; }
+.strat-detail-item h4 { font-size:13px; font-weight:700; margin-bottom:4px; }
+.strat-detail-item p { font-size:12px; color:var(--text-dim); }
+.strat-detail-item .strat-roi { font-size:12px; color:var(--green); font-weight:600; }
+
+.footer { text-align:center; padding:20px; color:var(--text-dim); font-size:12px; border-top:1px solid var(--border); margin-top:var(--gap); }
+
+@media (max-width:768px) {
+    .kpi-row { grid-template-columns:repeat(2,1fr); }
+    table { font-size:12px; }
+    thead th, tbody td { padding:8px 10px; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+    <div class="nav-inner">
+        <div class="nav-brand">AFL Betting Dashboard</div>
+        <div class="nav-links">
+            <a href="afl_edge_model.html" class="nav-link" id="nav-edge">Edge Model</a>
+            <a href="afl_strategy_playbook.html" class="nav-link" id="nav-strat">Strategy Playbook</a>
+            <a href="afl_combined_view.html" class="nav-link" id="nav-combined">Combined View</a>
+        </div>
+        <div class="nav-meta">Season 2026</div>
+    </div>
+</nav>
+<div class="container">
+    <div class="info-box">
+        <strong>Combined Confidence View</strong> &mdash; Games are tiered by how many models flag value.
+        <strong>Dual Signal</strong> = both the edge model AND a historical strategy agree &rarr; highest conviction.
+        Strategies marked <em>partial</em> need form/break data (available from Round 2).
+    </div>
+
+    <div class="filters">
+        <div class="filter-group"><label>Round:</label><select id="filter-round" onchange="render()"></select></div>
+        <div class="filter-group"><label>Min Edge:</label>
+            <select id="filter-min-edge" onchange="render()">
+                <option value="0">All</option>
+                <option value="2">2+ pts</option>
+                <option value="3" selected>3+ pts</option>
+                <option value="5">5+ pts</option>
+                <option value="8">8+ pts</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="kpis" class="kpi-row"></div>
+
+    <div id="tier-btns" class="tier-filters"></div>
+
+    <div id="game-detail" class="game-detail hidden"></div>
+
+    <div class="table-wrap">
+        <div class="scroll-table" style="max-height:600px;overflow-y:auto">
+            <table id="mainTable"></table>
+        </div>
+    </div>
+
+    <div class="footer">AFL Combined View &bull; Edge Model + Strategy Playbook &bull; Season 2026</div>
+</div>
+
+<script>
+const DATA = {"predictions":[{"round":"OR","home_team":"Sydney Swans","away_team":"Carlton","venue":"","date":"2026-03-05","home_elo":1628,"away_elo":1414,"ridge_pred":-29.7,"lgbm_pred":-11.0,"ensemble_pred":-17.5,"squiggle_line":null,"bookie_line":-22.5,"model_edge":5.0},{"round":"OR","home_team":"Gold Coast Suns","away_team":"Geelong Cats","venue":"","date":"2026-03-06","home_elo":1532,"away_elo":1536,"ridge_pred":1.8,"lgbm_pred":8.4,"ensemble_pred":6.1,"squiggle_line":null,"bookie_line":-3.5,"model_edge":9.6},{"round":"OR","home_team":"GWS Giants","away_team":"Hawthorn","venue":"","date":"2026-03-07","home_elo":1660,"away_elo":1696,"ridge_pred":-16.4,"lgbm_pred":-16.3,"ensemble_pred":-16.3,"squiggle_line":1.1,"bookie_line":10.5,"model_edge":-26.8},{"round":"OR","home_team":"Brisbane","away_team":"Western Bulldogs","venue":"","date":"2026-03-07","home_elo":1705,"away_elo":1595,"ridge_pred":-11.8,"lgbm_pred":-8.5,"ensemble_pred":-9.6,"squiggle_line":-10.0,"bookie_line":-16.5,"model_edge":6.9},{"round":"OR","home_team":"St Kilda","away_team":"Collingwood","venue":"","date":"2026-03-08","home_elo":1546,"away_elo":1567,"ridge_pred":4.6,"lgbm_pred":9.1,"ensemble_pred":7.6,"squiggle_line":17.5,"bookie_line":4.5,"model_edge":3.1},{"round":"1","home_team":"Carlton","away_team":"Richmond","venue":"","date":"2026-03-12","home_elo":1414,"away_elo":1261,"ridge_pred":-9.7,"lgbm_pred":1.9,"ensemble_pred":-2.2,"squiggle_line":-20.2,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Hawthorn","away_team":"Essendon","venue":"","date":"2026-03-13","home_elo":1696,"away_elo":1330,"ridge_pred":-18.4,"lgbm_pred":-15.0,"ensemble_pred":-16.2,"squiggle_line":-37.8,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Western Bulldogs","away_team":"GWS Giants","venue":"","date":"2026-03-14","home_elo":1595,"away_elo":1660,"ridge_pred":-0.3,"lgbm_pred":9.2,"ensemble_pred":5.8,"squiggle_line":-19.5,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Geelong Cats","away_team":"Fremantle","venue":"","date":"2026-03-14","home_elo":1536,"away_elo":1512,"ridge_pred":-12.2,"lgbm_pred":-2.7,"ensemble_pred":-6.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Sydney Swans","away_team":"Brisbane","venue":"","date":"2026-03-14","home_elo":1628,"away_elo":1705,"ridge_pred":-19.7,"lgbm_pred":-9.6,"ensemble_pred":-13.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Collingwood","away_team":"Adelaide Crows","venue":"","date":"2026-03-14","home_elo":1567,"away_elo":1561,"ridge_pred":19.5,"lgbm_pred":-3.9,"ensemble_pred":4.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"North Melbourne","away_team":"Port Adelaide","venue":"","date":"2026-03-15","home_elo":1340,"away_elo":1429,"ridge_pred":6.5,"lgbm_pred":9.4,"ensemble_pred":8.4,"squiggle_line":-0.5,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Melbourne","away_team":"St Kilda","venue":"","date":"2026-03-15","home_elo":1384,"away_elo":1546,"ridge_pred":-8.2,"lgbm_pred":3.1,"ensemble_pred":-0.9,"squiggle_line":-7.3,"bookie_line":null,"model_edge":null},{"round":"1","home_team":"Gold Coast Suns","away_team":"West Coast Eagles","venue":"","date":"2026-03-15","home_elo":1532,"away_elo":1304,"ridge_pred":1.8,"lgbm_pred":8.4,"ensemble_pred":6.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"Hawthorn","away_team":"Sydney Swans","venue":"","date":"2026-03-19","home_elo":1696,"away_elo":1628,"ridge_pred":-4.2,"lgbm_pred":-6.1,"ensemble_pred":-5.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"Adelaide Crows","away_team":"Western Bulldogs","venue":"","date":"2026-03-20","home_elo":1561,"away_elo":1595,"ridge_pred":-21.2,"lgbm_pred":5.9,"ensemble_pred":-3.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"Richmond","away_team":"Gold Coast Suns","venue":"","date":"2026-03-21","home_elo":1261,"away_elo":1532,"ridge_pred":31.9,"lgbm_pred":11.3,"ensemble_pred":18.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"GWS Giants","away_team":"St Kilda","venue":"","date":"2026-03-21","home_elo":1660,"away_elo":1546,"ridge_pred":-35.7,"lgbm_pred":-3.0,"ensemble_pred":-14.4,"squiggle_line":-22.5,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"Fremantle","away_team":"Melbourne","venue":"","date":"2026-03-21","home_elo":1512,"away_elo":1384,"ridge_pred":-29.9,"lgbm_pred":-3.8,"ensemble_pred":-12.9,"squiggle_line":-13.0,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"Port Adelaide","away_team":"Essendon","venue":"","date":"2026-03-22","home_elo":1429,"away_elo":1330,"ridge_pred":-9.8,"lgbm_pred":2.6,"ensemble_pred":-1.7,"squiggle_line":-16.2,"bookie_line":null,"model_edge":null},{"round":"2","home_team":"West Coast Eagles","away_team":"North Melbourne","venue":"","date":"2026-03-22","home_elo":1304,"away_elo":1340,"ridge_pred":-40.6,"lgbm_pred":-14.5,"ensemble_pred":-23.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Geelong Cats","away_team":"Adelaide Crows","venue":"","date":"2026-03-26","home_elo":1536,"away_elo":1561,"ridge_pred":1.8,"lgbm_pred":8.4,"ensemble_pred":6.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Collingwood","away_team":"GWS Giants","venue":"","date":"2026-03-27","home_elo":1567,"away_elo":1660,"ridge_pred":13.9,"lgbm_pred":9.6,"ensemble_pred":11.1,"squiggle_line":-11.5,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"St Kilda","away_team":"Brisbane","venue":"","date":"2026-03-28","home_elo":1546,"away_elo":1705,"ridge_pred":4.7,"lgbm_pred":-10.2,"ensemble_pred":-5.0,"squiggle_line":20.9,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Fremantle","away_team":"Richmond","venue":"","date":"2026-03-28","home_elo":1512,"away_elo":1261,"ridge_pred":-38.8,"lgbm_pred":-11.0,"ensemble_pred":-20.7,"squiggle_line":-36.5,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Essendon","away_team":"North Melbourne","venue":"","date":"2026-03-28","home_elo":1330,"away_elo":1340,"ridge_pred":-19.1,"lgbm_pred":8.6,"ensemble_pred":-1.1,"squiggle_line":1.2,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Port Adelaide","away_team":"West Coast Eagles","venue":"","date":"2026-03-29","home_elo":1429,"away_elo":1304,"ridge_pred":9.8,"lgbm_pred":7.5,"ensemble_pred":8.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"3","home_team":"Carlton","away_team":"Melbourne","venue":"","date":"2026-03-29","home_elo":1414,"away_elo":1384,"ridge_pred":-1.0,"lgbm_pred":10.9,"ensemble_pred":6.7,"squiggle_line":2.4,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Brisbane","away_team":"Collingwood","venue":"","date":"2026-04-02","home_elo":1705,"away_elo":1567,"ridge_pred":-16.2,"lgbm_pred":-9.0,"ensemble_pred":-11.5,"squiggle_line":-15.6,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"North Melbourne","away_team":"Carlton","venue":"","date":"2026-04-03","home_elo":1340,"away_elo":1414,"ridge_pred":9.6,"lgbm_pred":6.4,"ensemble_pred":7.5,"squiggle_line":14.2,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Adelaide Crows","away_team":"Fremantle","venue":"","date":"2026-04-03","home_elo":1561,"away_elo":1512,"ridge_pred":-12.1,"lgbm_pred":-2.7,"ensemble_pred":-6.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Richmond","away_team":"Port Adelaide","venue":"","date":"2026-04-04","home_elo":1261,"away_elo":1429,"ridge_pred":9.1,"lgbm_pred":12.4,"ensemble_pred":11.2,"squiggle_line":4.2,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"West Coast Eagles","away_team":"Sydney Swans","venue":"","date":"2026-04-04","home_elo":1304,"away_elo":1628,"ridge_pred":1.9,"lgbm_pred":8.4,"ensemble_pred":6.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Melbourne","away_team":"Gold Coast Suns","venue":"","date":"2026-04-05","home_elo":1384,"away_elo":1532,"ridge_pred":17.1,"lgbm_pred":7.8,"ensemble_pred":11.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Western Bulldogs","away_team":"Essendon","venue":"","date":"2026-04-05","home_elo":1595,"away_elo":1330,"ridge_pred":-8.6,"lgbm_pred":-8.5,"ensemble_pred":-8.6,"squiggle_line":-40.1,"bookie_line":null,"model_edge":null},{"round":"4","home_team":"Hawthorn","away_team":"Geelong Cats","venue":"","date":"2026-04-06","home_elo":1696,"away_elo":1536,"ridge_pred":-4.1,"lgbm_pred":-6.1,"ensemble_pred":-5.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Adelaide Crows","away_team":"Carlton","venue":"","date":"2026-04-09","home_elo":1561,"away_elo":1414,"ridge_pred":-13.8,"lgbm_pred":-11.0,"ensemble_pred":-12.0,"squiggle_line":-21.8,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Collingwood","away_team":"Fremantle","venue":"","date":"2026-04-10","home_elo":1567,"away_elo":1512,"ridge_pred":11.4,"lgbm_pred":-5.3,"ensemble_pred":0.5,"squiggle_line":-8.9,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Essendon","away_team":"Melbourne","venue":"","date":"2026-04-11","home_elo":1330,"away_elo":1384,"ridge_pred":-8.3,"lgbm_pred":10.5,"ensemble_pred":3.9,"squiggle_line":19.1,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"North Melbourne","away_team":"Brisbane","venue":"","date":"2026-04-11","home_elo":1340,"away_elo":1705,"ridge_pred":14.5,"lgbm_pred":3.6,"ensemble_pred":7.4,"squiggle_line":38.5,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Sydney Swans","away_team":"Gold Coast Suns","venue":"","date":"2026-04-11","home_elo":1628,"away_elo":1532,"ridge_pred":1.9,"lgbm_pred":8.4,"ensemble_pred":6.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Hawthorn","away_team":"Western Bulldogs","venue":"","date":"2026-04-11","home_elo":1696,"away_elo":1595,"ridge_pred":-15.4,"lgbm_pred":-9.5,"ensemble_pred":-11.6,"squiggle_line":2.3,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Geelong Cats","away_team":"West Coast Eagles","venue":"","date":"2026-04-12","home_elo":1536,"away_elo":1304,"ridge_pred":4.0,"lgbm_pred":-7.1,"ensemble_pred":-3.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"GWS Giants","away_team":"Richmond","venue":"","date":"2026-04-12","home_elo":1660,"away_elo":1261,"ridge_pred":-40.1,"lgbm_pred":-13.5,"ensemble_pred":-22.8,"squiggle_line":-32.6,"bookie_line":null,"model_edge":null},{"round":"5","home_team":"Port Adelaide","away_team":"St Kilda","venue":"","date":"2026-04-12","home_elo":1429,"away_elo":1546,"ridge_pred":-21.3,"lgbm_pred":-1.2,"ensemble_pred":-8.2,"squiggle_line":-4.3,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Carlton","away_team":"Collingwood","venue":"","date":"2026-04-16","home_elo":1414,"away_elo":1567,"ridge_pred":3.4,"lgbm_pred":11.1,"ensemble_pred":8.4,"squiggle_line":15.4,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Geelong Cats","away_team":"Western Bulldogs","venue":"","date":"2026-04-17","home_elo":1536,"away_elo":1595,"ridge_pred":-21.1,"lgbm_pred":5.9,"ensemble_pred":-3.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Sydney Swans","away_team":"GWS Giants","venue":"","date":"2026-04-17","home_elo":1628,"away_elo":1660,"ridge_pred":-9.5,"lgbm_pred":10.2,"ensemble_pred":3.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Gold Coast Suns","away_team":"Essendon","venue":"","date":"2026-04-18","home_elo":1532,"away_elo":1330,"ridge_pred":-23.3,"lgbm_pred":-12.9,"ensemble_pred":-16.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Hawthorn","away_team":"Port Adelaide","venue":"","date":"2026-04-18","home_elo":1696,"away_elo":1429,"ridge_pred":-27.0,"lgbm_pred":-13.5,"ensemble_pred":-18.2,"squiggle_line":-34.4,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Adelaide Crows","away_team":"St Kilda","venue":"","date":"2026-04-18","home_elo":1561,"away_elo":1546,"ridge_pred":-34.9,"lgbm_pred":2.8,"ensemble_pred":-10.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"North Melbourne","away_team":"Richmond","venue":"","date":"2026-04-19","home_elo":1340,"away_elo":1261,"ridge_pred":0.7,"lgbm_pred":-2.4,"ensemble_pred":-1.3,"squiggle_line":-8.9,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"Melbourne","away_team":"Brisbane","venue":"","date":"2026-04-19","home_elo":1384,"away_elo":1705,"ridge_pred":2.2,"lgbm_pred":0.8,"ensemble_pred":1.3,"squiggle_line":13.2,"bookie_line":null,"model_edge":null},{"round":"6","home_team":"West Coast Eagles","away_team":"Fremantle","venue":"","date":"2026-04-19","home_elo":1304,"away_elo":1512,"ridge_pred":-12.1,"lgbm_pred":-2.7,"ensemble_pred":-6.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Western Bulldogs","away_team":"Sydney Swans","venue":"","date":"2026-04-23","home_elo":1595,"away_elo":1628,"ridge_pred":5.5,"lgbm_pred":-5.3,"ensemble_pred":-1.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Richmond","away_team":"Melbourne","venue":"","date":"2026-04-24","home_elo":1261,"away_elo":1384,"ridge_pred":11.8,"lgbm_pred":8.5,"ensemble_pred":9.7,"squiggle_line":23.1,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Hawthorn","away_team":"Gold Coast Suns","venue":"","date":"2026-04-25","home_elo":1696,"away_elo":1532,"ridge_pred":-4.0,"lgbm_pred":-6.1,"ensemble_pred":-5.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Essendon","away_team":"Collingwood","venue":"","date":"2026-04-25","home_elo":1330,"away_elo":1567,"ridge_pred":-4.1,"lgbm_pred":7.2,"ensemble_pred":3.2,"squiggle_line":31.5,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Port Adelaide","away_team":"Geelong Cats","venue":"","date":"2026-04-25","home_elo":1429,"away_elo":1536,"ridge_pred":9.9,"lgbm_pred":7.5,"ensemble_pred":8.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Fremantle","away_team":"Carlton","venue":"","date":"2026-04-25","home_elo":1512,"away_elo":1414,"ridge_pred":-29.5,"lgbm_pred":-6.4,"ensemble_pred":-14.5,"squiggle_line":-16.3,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"St Kilda","away_team":"West Coast Eagles","venue":"","date":"2026-04-26","home_elo":1546,"away_elo":1304,"ridge_pred":20.7,"lgbm_pred":3.4,"ensemble_pred":9.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"Brisbane","away_team":"Adelaide Crows","venue":"","date":"2026-04-26","home_elo":1705,"away_elo":1561,"ridge_pred":5.2,"lgbm_pred":-6.9,"ensemble_pred":-2.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"7","home_team":"GWS Giants","away_team":"North Melbourne","venue":"","date":"2026-04-26","home_elo":1660,"away_elo":1340,"ridge_pred":-41.5,"lgbm_pred":-10.6,"ensemble_pred":-21.4,"squiggle_line":-30.5,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Collingwood","away_team":"Hawthorn","venue":"","date":"2026-04-30","home_elo":1567,"away_elo":1696,"ridge_pred":13.7,"lgbm_pred":-8.4,"ensemble_pred":-0.7,"squiggle_line":2.6,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Western Bulldogs","away_team":"Fremantle","venue":"","date":"2026-05-01","home_elo":1595,"away_elo":1512,"ridge_pred":-2.8,"lgbm_pred":-5.7,"ensemble_pred":-4.6,"squiggle_line":-22.8,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Adelaide Crows","away_team":"Port Adelaide","venue":"","date":"2026-05-01","home_elo":1561,"away_elo":1429,"ridge_pred":-26.6,"lgbm_pred":-4.3,"ensemble_pred":-12.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Essendon","away_team":"Brisbane","venue":"","date":"2026-05-02","home_elo":1330,"away_elo":1705,"ridge_pred":-3.4,"lgbm_pred":-1.6,"ensemble_pred":-2.2,"squiggle_line":34.0,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"West Coast Eagles","away_team":"Richmond","venue":"","date":"2026-05-02","home_elo":1304,"away_elo":1261,"ridge_pred":-38.7,"lgbm_pred":-14.7,"ensemble_pred":-23.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Geelong Cats","away_team":"North Melbourne","venue":"","date":"2026-05-02","home_elo":1536,"away_elo":1340,"ridge_pred":-40.5,"lgbm_pred":-14.5,"ensemble_pred":-23.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Carlton","away_team":"St Kilda","venue":"","date":"2026-05-02","home_elo":1414,"away_elo":1546,"ridge_pred":-5.9,"lgbm_pred":5.9,"ensemble_pred":1.8,"squiggle_line":-4.4,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Sydney Swans","away_team":"Melbourne","venue":"","date":"2026-05-03","home_elo":1628,"away_elo":1384,"ridge_pred":-29.7,"lgbm_pred":-10.5,"ensemble_pred":-17.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"8","home_team":"Gold Coast Suns","away_team":"GWS Giants","venue":"","date":"2026-05-03","home_elo":1532,"away_elo":1660,"ridge_pred":-9.5,"lgbm_pred":10.2,"ensemble_pred":3.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Fremantle","away_team":"Hawthorn","venue":"","date":"2026-05-07","home_elo":1512,"away_elo":1696,"ridge_pred":-15.5,"lgbm_pred":-16.7,"ensemble_pred":-16.3,"squiggle_line":1.7,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Brisbane","away_team":"Carlton","venue":"","date":"2026-05-08","home_elo":1705,"away_elo":1414,"ridge_pred":-21.5,"lgbm_pred":-12.2,"ensemble_pred":-15.4,"squiggle_line":-32.8,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Port Adelaide","away_team":"Western Bulldogs","venue":"","date":"2026-05-08","home_elo":1429,"away_elo":1595,"ridge_pred":-7.3,"lgbm_pred":1.1,"ensemble_pred":-1.8,"squiggle_line":22.6,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"North Melbourne","away_team":"Sydney Swans","venue":"","date":"2026-05-09","home_elo":1340,"away_elo":1628,"ridge_pred":29.6,"lgbm_pred":9.4,"ensemble_pred":16.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"GWS Giants","away_team":"Essendon","venue":"","date":"2026-05-09","home_elo":1660,"away_elo":1330,"ridge_pred":-24.2,"lgbm_pred":-9.5,"ensemble_pred":-14.6,"squiggle_line":-35.9,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Gold Coast Suns","away_team":"St Kilda","venue":"","date":"2026-05-09","home_elo":1532,"away_elo":1546,"ridge_pred":-34.8,"lgbm_pred":2.8,"ensemble_pred":-10.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Geelong Cats","away_team":"Collingwood","venue":"","date":"2026-05-09","home_elo":1536,"away_elo":1567,"ridge_pred":-25.4,"lgbm_pred":9.4,"ensemble_pred":-2.8,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Melbourne","away_team":"West Coast Eagles","venue":"","date":"2026-05-10","home_elo":1384,"away_elo":1304,"ridge_pred":17.3,"lgbm_pred":7.8,"ensemble_pred":11.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"9","home_team":"Richmond","away_team":"Adelaide Crows","venue":"","date":"2026-05-10","home_elo":1261,"away_elo":1561,"ridge_pred":32.1,"lgbm_pred":11.3,"ensemble_pred":18.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Brisbane","away_team":"Geelong Cats","venue":"","date":"2026-05-14","home_elo":1705,"away_elo":1536,"ridge_pred":5.3,"lgbm_pred":-6.9,"ensemble_pred":-2.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Sydney Swans","away_team":"Collingwood","venue":"","date":"2026-05-15","home_elo":1628,"away_elo":1567,"ridge_pred":-25.4,"lgbm_pred":9.4,"ensemble_pred":-2.8,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Gold Coast Suns","away_team":"Port Adelaide","venue":"","date":"2026-05-15","home_elo":1532,"away_elo":1429,"ridge_pred":-26.5,"lgbm_pred":-4.3,"ensemble_pred":-12.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Adelaide Crows","away_team":"North Melbourne","venue":"","date":"2026-05-16","home_elo":1561,"away_elo":1340,"ridge_pred":-40.4,"lgbm_pred":-14.5,"ensemble_pred":-23.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Melbourne","away_team":"Hawthorn","venue":"","date":"2026-05-16","home_elo":1384,"away_elo":1696,"ridge_pred":11.7,"lgbm_pred":-5.6,"ensemble_pred":0.5,"squiggle_line":15.3,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Carlton","away_team":"Western Bulldogs","venue":"","date":"2026-05-16","home_elo":1414,"away_elo":1595,"ridge_pred":8.0,"lgbm_pred":7.7,"ensemble_pred":7.8,"squiggle_line":22.4,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"Essendon","away_team":"Fremantle","venue":"","date":"2026-05-17","home_elo":1330,"away_elo":1512,"ridge_pred":3.7,"lgbm_pred":12.6,"ensemble_pred":9.5,"squiggle_line":17.4,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"St Kilda","away_team":"Richmond","venue":"","date":"2026-05-17","home_elo":1546,"away_elo":1261,"ridge_pred":-8.8,"lgbm_pred":-7.6,"ensemble_pred":-8.0,"squiggle_line":-19.1,"bookie_line":null,"model_edge":null},{"round":"10","home_team":"West Coast Eagles","away_team":"GWS Giants","venue":"","date":"2026-05-17","home_elo":1304,"away_elo":1660,"ridge_pred":-9.4,"lgbm_pred":10.2,"ensemble_pred":3.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Hawthorn","away_team":"Adelaide Crows","venue":"","date":"2026-05-21","home_elo":1696,"away_elo":1561,"ridge_pred":-3.9,"lgbm_pred":-6.1,"ensemble_pred":-5.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Richmond","away_team":"Essendon","venue":"","date":"2026-05-22","home_elo":1261,"away_elo":1330,"ridge_pred":18.3,"lgbm_pred":13.4,"ensemble_pred":15.1,"squiggle_line":3.7,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Fremantle","away_team":"St Kilda","venue":"","date":"2026-05-22","home_elo":1512,"away_elo":1546,"ridge_pred":-34.8,"lgbm_pred":-5.2,"ensemble_pred":-15.6,"squiggle_line":-21.1,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"North Melbourne","away_team":"Gold Coast Suns","venue":"","date":"2026-05-23","home_elo":1340,"away_elo":1532,"ridge_pred":29.7,"lgbm_pred":9.4,"ensemble_pred":16.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Geelong Cats","away_team":"Sydney Swans","venue":"","date":"2026-05-23","home_elo":1536,"away_elo":1628,"ridge_pred":2.1,"lgbm_pred":8.4,"ensemble_pred":6.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Collingwood","away_team":"West Coast Eagles","venue":"","date":"2026-05-23","home_elo":1567,"away_elo":1304,"ridge_pred":19.8,"lgbm_pred":-3.9,"ensemble_pred":4.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Port Adelaide","away_team":"Carlton","venue":"","date":"2026-05-23","home_elo":1429,"away_elo":1414,"ridge_pred":-15.7,"lgbm_pred":-5.7,"ensemble_pred":-9.2,"squiggle_line":-0.1,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"GWS Giants","away_team":"Brisbane","venue":"","date":"2026-05-24","home_elo":1660,"away_elo":1705,"ridge_pred":-20.3,"lgbm_pred":-15.3,"ensemble_pred":-17.1,"squiggle_line":6.3,"bookie_line":null,"model_edge":null},{"round":"11","home_team":"Western Bulldogs","away_team":"Melbourne","venue":"","date":"2026-05-24","home_elo":1595,"away_elo":1384,"ridge_pred":-14.9,"lgbm_pred":-9.2,"ensemble_pred":-11.2,"squiggle_line":-22.2,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"St Kilda","away_team":"Hawthorn","venue":"","date":"2026-05-28","home_elo":1546,"away_elo":1696,"ridge_pred":14.8,"lgbm_pred":-10.7,"ensemble_pred":-1.8,"squiggle_line":21.8,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"Carlton","away_team":"Geelong Cats","venue":"","date":"2026-05-29","home_elo":1414,"away_elo":1536,"ridge_pred":19.4,"lgbm_pred":10.6,"ensemble_pred":13.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"Sydney Swans","away_team":"Richmond","venue":"","date":"2026-05-30","home_elo":1628,"away_elo":1261,"ridge_pred":-38.6,"lgbm_pred":-14.7,"ensemble_pred":-23.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"Brisbane","away_team":"Fremantle","venue":"","date":"2026-05-30","home_elo":1705,"away_elo":1512,"ridge_pred":-3.0,"lgbm_pred":-9.7,"ensemble_pred":-7.3,"squiggle_line":-25.1,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"Western Bulldogs","away_team":"Collingwood","venue":"","date":"2026-05-30","home_elo":1595,"away_elo":1567,"ridge_pred":-10.3,"lgbm_pred":-1.5,"ensemble_pred":-4.5,"squiggle_line":-9.0,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"Melbourne","away_team":"GWS Giants","venue":"","date":"2026-05-31","home_elo":1384,"away_elo":1660,"ridge_pred":11.9,"lgbm_pred":9.1,"ensemble_pred":10.1,"squiggle_line":6.6,"bookie_line":null,"model_edge":null},{"round":"12","home_team":"West Coast Eagles","away_team":"Essendon","venue":"","date":"2026-05-31","home_elo":1304,"away_elo":1330,"ridge_pred":-23.1,"lgbm_pred":-12.9,"ensemble_pred":-16.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Adelaide Crows","away_team":"Geelong Cats","venue":"","date":"2026-06-04","home_elo":1561,"away_elo":1536,"ridge_pred":2.1,"lgbm_pred":8.4,"ensemble_pred":6.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Hawthorn","away_team":"Western Bulldogs","venue":"","date":"2026-06-05","home_elo":1696,"away_elo":1595,"ridge_pred":-15.2,"lgbm_pred":-9.3,"ensemble_pred":-11.3,"squiggle_line":2.3,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"North Melbourne","away_team":"Fremantle","venue":"","date":"2026-06-06","home_elo":1340,"away_elo":1512,"ridge_pred":21.5,"lgbm_pred":6.8,"ensemble_pred":11.9,"squiggle_line":27.2,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Gold Coast Suns","away_team":"Brisbane","venue":"","date":"2026-06-06","home_elo":1532,"away_elo":1705,"ridge_pred":-19.3,"lgbm_pred":-9.6,"ensemble_pred":-13.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"West Coast Eagles","away_team":"Port Adelaide","venue":"","date":"2026-06-06","home_elo":1304,"away_elo":1429,"ridge_pred":-26.4,"lgbm_pred":-4.1,"ensemble_pred":-11.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Sydney Swans","away_team":"St Kilda","venue":"","date":"2026-06-07","home_elo":1628,"away_elo":1546,"ridge_pred":-34.7,"lgbm_pred":2.8,"ensemble_pred":-10.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Essendon","away_team":"Carlton","venue":"","date":"2026-06-07","home_elo":1330,"away_elo":1414,"ridge_pred":-7.8,"lgbm_pred":3.6,"ensemble_pred":-0.4,"squiggle_line":16.5,"bookie_line":null,"model_edge":null},{"round":"13","home_team":"Collingwood","away_team":"Melbourne","venue":"","date":"2026-06-08","home_elo":1567,"away_elo":1384,"ridge_pred":-0.6,"lgbm_pred":-6.4,"ensemble_pred":-4.4,"squiggle_line":-13.7,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"Western Bulldogs","away_team":"Adelaide Crows","venue":"","date":"2026-06-11","home_elo":1595,"away_elo":1561,"ridge_pred":5.7,"lgbm_pred":-5.1,"ensemble_pred":-1.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"Geelong Cats","away_team":"Gold Coast Suns","venue":"","date":"2026-06-12","home_elo":1536,"away_elo":1532,"ridge_pred":2.2,"lgbm_pred":8.4,"ensemble_pred":6.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"Melbourne","away_team":"Essendon","venue":"","date":"2026-06-13","home_elo":1384,"away_elo":1330,"ridge_pred":3.7,"lgbm_pred":9.9,"ensemble_pred":7.7,"squiggle_line":-21.5,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"North Melbourne","away_team":"West Coast Eagles","venue":"","date":"2026-06-13","home_elo":1340,"away_elo":1304,"ridge_pred":29.8,"lgbm_pred":9.4,"ensemble_pred":16.5,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"Port Adelaide","away_team":"Sydney Swans","venue":"","date":"2026-06-13","home_elo":1429,"away_elo":1628,"ridge_pred":10.1,"lgbm_pred":7.5,"ensemble_pred":8.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"Richmond","away_team":"Brisbane","venue":"","date":"2026-06-14","home_elo":1261,"away_elo":1705,"ridge_pred":17.8,"lgbm_pred":6.4,"ensemble_pred":10.4,"squiggle_line":42.2,"bookie_line":null,"model_edge":null},{"round":"14","home_team":"St Kilda","away_team":"GWS Giants","venue":"","date":"2026-06-14","home_elo":1546,"away_elo":1660,"ridge_pred":15.3,"lgbm_pred":9.1,"ensemble_pred":11.3,"squiggle_line":7.6,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"Fremantle","away_team":"Geelong Cats","venue":"","date":"2026-06-18","home_elo":1512,"away_elo":1536,"ridge_pred":-3.6,"lgbm_pred":5.3,"ensemble_pred":2.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"Gold Coast Suns","away_team":"Hawthorn","venue":"","date":"2026-06-19","home_elo":1532,"away_elo":1696,"ridge_pred":-15.3,"lgbm_pred":-10.3,"ensemble_pred":-12.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"Adelaide Crows","away_team":"Melbourne","venue":"","date":"2026-06-20","home_elo":1561,"away_elo":1384,"ridge_pred":-29.5,"lgbm_pred":-9.4,"ensemble_pred":-16.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"GWS Giants","away_team":"Carlton","venue":"","date":"2026-06-20","home_elo":1660,"away_elo":1414,"ridge_pred":-30.4,"lgbm_pred":-7.1,"ensemble_pred":-15.3,"squiggle_line":-18.4,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"Collingwood","away_team":"Port Adelaide","venue":"","date":"2026-06-20","home_elo":1567,"away_elo":1429,"ridge_pred":-2.9,"lgbm_pred":-3.7,"ensemble_pred":-3.4,"squiggle_line":-32.5,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"Richmond","away_team":"North Melbourne","venue":"","date":"2026-06-21","home_elo":1261,"away_elo":1340,"ridge_pred":1.3,"lgbm_pred":10.2,"ensemble_pred":7.1,"squiggle_line":4.5,"bookie_line":null,"model_edge":null},{"round":"15","home_team":"St Kilda","away_team":"Western Bulldogs","venue":"","date":"2026-06-21","home_elo":1546,"away_elo":1595,"ridge_pred":9.4,"lgbm_pred":5.1,"ensemble_pred":6.6,"squiggle_line":26.5,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Brisbane","away_team":"Sydney Swans","venue":"","date":"2026-06-27","home_elo":1705,"away_elo":1628,"ridge_pred":5.5,"lgbm_pred":-6.3,"ensemble_pred":-2.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Carlton","away_team":"West Coast Eagles","venue":"","date":"2026-06-27","home_elo":1414,"away_elo":1304,"ridge_pred":19.5,"lgbm_pred":10.6,"ensemble_pred":13.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Collingwood","away_team":"Richmond","venue":"","date":"2026-06-27","home_elo":1567,"away_elo":1261,"ridge_pred":-9.6,"lgbm_pred":-8.5,"ensemble_pred":-8.9,"squiggle_line":-38.4,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Fremantle","away_team":"Gold Coast Suns","venue":"","date":"2026-06-27","home_elo":1512,"away_elo":1532,"ridge_pred":-3.6,"lgbm_pred":5.3,"ensemble_pred":2.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Hawthorn","away_team":"GWS Giants","venue":"","date":"2026-06-27","home_elo":1696,"away_elo":1660,"ridge_pred":-9.3,"lgbm_pred":-7.5,"ensemble_pred":-8.1,"squiggle_line":-17.0,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"North Melbourne","away_team":"Essendon","venue":"","date":"2026-06-27","home_elo":1340,"away_elo":1330,"ridge_pred":16.1,"lgbm_pred":10.9,"ensemble_pred":12.7,"squiggle_line":-2.7,"bookie_line":null,"model_edge":null},{"round":"16","home_team":"Port Adelaide","away_team":"Adelaide Crows","venue":"","date":"2026-06-27","home_elo":1429,"away_elo":1561,"ridge_pred":10.1,"lgbm_pred":7.5,"ensemble_pred":8.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Essendon","away_team":"St Kilda","venue":"","date":"2026-07-04","home_elo":1330,"away_elo":1546,"ridge_pred":-13.2,"lgbm_pred":0.6,"ensemble_pred":-4.3,"squiggle_line":12.7,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Geelong Cats","away_team":"Brisbane","venue":"","date":"2026-07-04","home_elo":1536,"away_elo":1705,"ridge_pred":-19.2,"lgbm_pred":-9.6,"ensemble_pred":-12.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Gold Coast Suns","away_team":"Collingwood","venue":"","date":"2026-07-04","home_elo":1532,"away_elo":1567,"ridge_pred":-25.2,"lgbm_pred":9.4,"ensemble_pred":-2.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"GWS Giants","away_team":"Fremantle","venue":"","date":"2026-07-04","home_elo":1660,"away_elo":1512,"ridge_pred":-12.5,"lgbm_pred":-5.1,"ensemble_pred":-7.7,"squiggle_line":-7.2,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Hawthorn","away_team":"Melbourne","venue":"","date":"2026-07-04","home_elo":1696,"away_elo":1384,"ridge_pred":-24.6,"lgbm_pred":-13.0,"ensemble_pred":-17.1,"squiggle_line":-20.4,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Port Adelaide","away_team":"North Melbourne","venue":"","date":"2026-07-04","home_elo":1429,"away_elo":1340,"ridge_pred":-26.5,"lgbm_pred":-7.7,"ensemble_pred":-14.3,"squiggle_line":-15.5,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Richmond","away_team":"Carlton","venue":"","date":"2026-07-04","home_elo":1261,"away_elo":1414,"ridge_pred":12.4,"lgbm_pred":9.7,"ensemble_pred":10.6,"squiggle_line":20.6,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"Sydney Swans","away_team":"Western Bulldogs","venue":"","date":"2026-07-04","home_elo":1628,"away_elo":1595,"ridge_pred":-20.7,"lgbm_pred":5.9,"ensemble_pred":-3.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"17","home_team":"West Coast Eagles","away_team":"Adelaide Crows","venue":"","date":"2026-07-04","home_elo":1304,"away_elo":1561,"ridge_pred":2.3,"lgbm_pred":8.4,"ensemble_pred":6.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Adelaide Crows","away_team":"Gold Coast Suns","venue":"","date":"2026-07-11","home_elo":1561,"away_elo":1532,"ridge_pred":2.3,"lgbm_pred":8.4,"ensemble_pred":6.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Brisbane","away_team":"Essendon","venue":"","date":"2026-07-11","home_elo":1705,"away_elo":1330,"ridge_pred":-14.5,"lgbm_pred":-11.5,"ensemble_pred":-12.5,"squiggle_line":-50.0,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Carlton","away_team":"Hawthorn","venue":"","date":"2026-07-11","home_elo":1414,"away_elo":1696,"ridge_pred":14.1,"lgbm_pred":-1.4,"ensemble_pred":4.0,"squiggle_line":18.9,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Collingwood","away_team":"North Melbourne","venue":"","date":"2026-07-11","home_elo":1567,"away_elo":1340,"ridge_pred":-11.2,"lgbm_pred":-8.1,"ensemble_pred":-9.2,"squiggle_line":-31.6,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Fremantle","away_team":"Sydney Swans","venue":"","date":"2026-07-11","home_elo":1512,"away_elo":1628,"ridge_pred":-3.5,"lgbm_pred":5.3,"ensemble_pred":2.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"GWS Giants","away_team":"Geelong Cats","venue":"","date":"2026-07-11","home_elo":1660,"away_elo":1536,"ridge_pred":-4.2,"lgbm_pred":-2.4,"ensemble_pred":-3.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Melbourne","away_team":"Richmond","venue":"","date":"2026-07-11","home_elo":1384,"away_elo":1261,"ridge_pred":-11.3,"lgbm_pred":-7.1,"ensemble_pred":-8.5,"squiggle_line":-25.8,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"St Kilda","away_team":"Port Adelaide","venue":"","date":"2026-07-11","home_elo":1546,"away_elo":1429,"ridge_pred":-1.8,"lgbm_pred":0.4,"ensemble_pred":-0.4,"squiggle_line":-11.9,"bookie_line":null,"model_edge":null},{"round":"18","home_team":"Western Bulldogs","away_team":"West Coast Eagles","venue":"","date":"2026-07-11","home_elo":1595,"away_elo":1304,"ridge_pred":5.8,"lgbm_pred":-4.7,"ensemble_pred":-1.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Collingwood","away_team":"Carlton","venue":"","date":"2026-07-18","home_elo":1567,"away_elo":1414,"ridge_pred":-0.2,"lgbm_pred":-6.6,"ensemble_pred":-4.4,"squiggle_line":-16.7,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Essendon","away_team":"GWS Giants","venue":"","date":"2026-07-18","home_elo":1330,"away_elo":1660,"ridge_pred":6.6,"lgbm_pred":9.2,"ensemble_pred":8.3,"squiggle_line":21.1,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Geelong Cats","away_team":"St Kilda","venue":"","date":"2026-07-18","home_elo":1536,"away_elo":1546,"ridge_pred":-34.5,"lgbm_pred":2.8,"ensemble_pred":-10.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Gold Coast Suns","away_team":"Western Bulldogs","venue":"","date":"2026-07-18","home_elo":1532,"away_elo":1595,"ridge_pred":-20.7,"lgbm_pred":5.9,"ensemble_pred":-3.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"North Melbourne","away_team":"Melbourne","venue":"","date":"2026-07-18","home_elo":1340,"away_elo":1384,"ridge_pred":9.8,"lgbm_pred":5.2,"ensemble_pred":6.8,"squiggle_line":16.8,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Port Adelaide","away_team":"Fremantle","venue":"","date":"2026-07-18","home_elo":1429,"away_elo":1512,"ridge_pred":2.0,"lgbm_pred":7.9,"ensemble_pred":5.8,"squiggle_line":7.8,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Richmond","away_team":"Hawthorn","venue":"","date":"2026-07-18","home_elo":1261,"away_elo":1696,"ridge_pred":27.2,"lgbm_pred":8.5,"ensemble_pred":15.1,"squiggle_line":40.3,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"Sydney Swans","away_team":"Adelaide Crows","venue":"","date":"2026-07-18","home_elo":1628,"away_elo":1561,"ridge_pred":2.3,"lgbm_pred":8.4,"ensemble_pred":6.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"19","home_team":"West Coast Eagles","away_team":"Brisbane","venue":"","date":"2026-07-18","home_elo":1304,"away_elo":1705,"ridge_pred":-19.1,"lgbm_pred":-9.6,"ensemble_pred":-12.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Adelaide Crows","away_team":"Collingwood","venue":"","date":"2026-07-25","home_elo":1561,"away_elo":1567,"ridge_pred":-25.1,"lgbm_pred":9.4,"ensemble_pred":-2.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Brisbane","away_team":"Port Adelaide","venue":"","date":"2026-07-25","home_elo":1705,"away_elo":1429,"ridge_pred":-17.4,"lgbm_pred":-10.3,"ensemble_pred":-12.8,"squiggle_line":-42.2,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Carlton","away_team":"Gold Coast Suns","venue":"","date":"2026-07-25","home_elo":1414,"away_elo":1532,"ridge_pred":19.7,"lgbm_pred":10.6,"ensemble_pred":13.8,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Fremantle","away_team":"West Coast Eagles","venue":"","date":"2026-07-25","home_elo":1512,"away_elo":1304,"ridge_pred":-3.4,"lgbm_pred":5.3,"ensemble_pred":2.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"GWS Giants","away_team":"Sydney Swans","venue":"","date":"2026-07-25","home_elo":1660,"away_elo":1628,"ridge_pred":-4.1,"lgbm_pred":-2.4,"ensemble_pred":-3.0,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Hawthorn","away_team":"Essendon","venue":"","date":"2026-07-25","home_elo":1696,"away_elo":1330,"ridge_pred":-17.8,"lgbm_pred":-14.1,"ensemble_pred":-15.4,"squiggle_line":-37.8,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"North Melbourne","away_team":"St Kilda","venue":"","date":"2026-07-25","home_elo":1340,"away_elo":1546,"ridge_pred":4.7,"lgbm_pred":0.4,"ensemble_pred":1.9,"squiggle_line":10.3,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Melbourne","away_team":"Geelong Cats","venue":"","date":"2026-07-25","home_elo":1384,"away_elo":1536,"ridge_pred":17.6,"lgbm_pred":7.8,"ensemble_pred":11.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"20","home_team":"Western Bulldogs","away_team":"Richmond","venue":"","date":"2026-07-25","home_elo":1595,"away_elo":1261,"ridge_pred":-23.9,"lgbm_pred":-10.7,"ensemble_pred":-15.3,"squiggle_line":-47.6,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Carlton","away_team":"Brisbane","venue":"","date":"2026-08-01","home_elo":1414,"away_elo":1705,"ridge_pred":4.9,"lgbm_pred":6.1,"ensemble_pred":5.7,"squiggle_line":18.3,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Collingwood","away_team":"Geelong Cats","venue":"","date":"2026-08-01","home_elo":1567,"away_elo":1536,"ridge_pred":20.1,"lgbm_pred":-2.6,"ensemble_pred":5.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Essendon","away_team":"Adelaide Crows","venue":"","date":"2026-08-01","home_elo":1330,"away_elo":1561,"ridge_pred":12.3,"lgbm_pred":11.0,"ensemble_pred":11.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Fremantle","away_team":"Western Bulldogs","venue":"","date":"2026-08-01","home_elo":1512,"away_elo":1595,"ridge_pred":-20.7,"lgbm_pred":-1.9,"ensemble_pred":-8.5,"squiggle_line":4.7,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Gold Coast Suns","away_team":"Melbourne","venue":"","date":"2026-08-01","home_elo":1532,"away_elo":1384,"ridge_pred":-29.3,"lgbm_pred":-8.3,"ensemble_pred":-15.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Hawthorn","away_team":"North Melbourne","venue":"","date":"2026-08-01","home_elo":1696,"away_elo":1340,"ridge_pred":-35.1,"lgbm_pred":-15.0,"ensemble_pred":-22.0,"squiggle_line":-38.8,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Port Adelaide","away_team":"GWS Giants","venue":"","date":"2026-08-01","home_elo":1429,"away_elo":1660,"ridge_pred":4.6,"lgbm_pred":6.2,"ensemble_pred":5.6,"squiggle_line":10.6,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"Richmond","away_team":"West Coast Eagles","venue":"","date":"2026-08-01","home_elo":1261,"away_elo":1304,"ridge_pred":32.5,"lgbm_pred":11.3,"ensemble_pred":18.7,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"21","home_team":"St Kilda","away_team":"Sydney Swans","venue":"","date":"2026-08-01","home_elo":1546,"away_elo":1628,"ridge_pred":21.2,"lgbm_pred":3.9,"ensemble_pred":9.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Adelaide Crows","away_team":"Richmond","venue":"","date":"2026-08-08","home_elo":1561,"away_elo":1261,"ridge_pred":-38.3,"lgbm_pred":-15.0,"ensemble_pred":-23.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Brisbane","away_team":"Hawthorn","venue":"","date":"2026-08-08","home_elo":1705,"away_elo":1696,"ridge_pred":-5.6,"lgbm_pred":-11.4,"ensemble_pred":-9.3,"squiggle_line":-14.0,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Geelong Cats","away_team":"Essendon","venue":"","date":"2026-08-08","home_elo":1536,"away_elo":1330,"ridge_pred":-22.8,"lgbm_pred":-12.8,"ensemble_pred":-16.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"GWS Giants","away_team":"Gold Coast Suns","venue":"","date":"2026-08-08","home_elo":1660,"away_elo":1532,"ridge_pred":-4.1,"lgbm_pred":-4.5,"ensemble_pred":-4.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Melbourne","away_team":"Fremantle","venue":"","date":"2026-08-08","home_elo":1384,"away_elo":1512,"ridge_pred":9.4,"lgbm_pred":5.6,"ensemble_pred":7.0,"squiggle_line":-3.5,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"St Kilda","away_team":"Carlton","venue":"","date":"2026-08-08","home_elo":1546,"away_elo":1414,"ridge_pred":0.9,"lgbm_pred":-5.6,"ensemble_pred":-3.3,"squiggle_line":3.1,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Sydney Swans","away_team":"Port Adelaide","venue":"","date":"2026-08-08","home_elo":1628,"away_elo":1429,"ridge_pred":-26.2,"lgbm_pred":-5.3,"ensemble_pred":-12.6,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"West Coast Eagles","away_team":"Collingwood","venue":"","date":"2026-08-08","home_elo":1304,"away_elo":1567,"ridge_pred":-25.0,"lgbm_pred":5.9,"ensemble_pred":-4.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"22","home_team":"Western Bulldogs","away_team":"North Melbourne","venue":"","date":"2026-08-08","home_elo":1595,"away_elo":1340,"ridge_pred":-25.3,"lgbm_pred":-11.7,"ensemble_pred":-16.5,"squiggle_line":-40.2,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Brisbane","away_team":"Gold Coast Suns","venue":"","date":"2026-08-15","home_elo":1705,"away_elo":1532,"ridge_pred":5.7,"lgbm_pred":-8.2,"ensemble_pred":-3.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Essendon","away_team":"Sydney Swans","venue":"","date":"2026-08-15","home_elo":1330,"away_elo":1628,"ridge_pred":12.3,"lgbm_pred":8.9,"ensemble_pred":10.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Fremantle","away_team":"Adelaide Crows","venue":"","date":"2026-08-15","home_elo":1512,"away_elo":1561,"ridge_pred":-3.4,"lgbm_pred":3.2,"ensemble_pred":0.9,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"GWS Giants","away_team":"West Coast Eagles","venue":"","date":"2026-08-15","home_elo":1660,"away_elo":1304,"ridge_pred":-4.0,"lgbm_pred":-4.5,"ensemble_pred":-4.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Hawthorn","away_team":"Collingwood","venue":"","date":"2026-08-15","home_elo":1696,"away_elo":1567,"ridge_pred":-19.3,"lgbm_pred":-11.1,"ensemble_pred":-14.0,"squiggle_line":-3.9,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"North Melbourne","away_team":"Geelong Cats","venue":"","date":"2026-08-15","home_elo":1340,"away_elo":1536,"ridge_pred":30.1,"lgbm_pred":7.3,"ensemble_pred":15.3,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Port Adelaide","away_team":"Melbourne","venue":"","date":"2026-08-15","home_elo":1429,"away_elo":1384,"ridge_pred":-15.6,"lgbm_pred":-6.0,"ensemble_pred":-9.3,"squiggle_line":3.7,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Richmond","away_team":"St Kilda","venue":"","date":"2026-08-15","home_elo":1261,"away_elo":1546,"ridge_pred":7.4,"lgbm_pred":5.1,"ensemble_pred":5.9,"squiggle_line":15.2,"bookie_line":null,"model_edge":null},{"round":"23","home_team":"Western Bulldogs","away_team":"Carlton","venue":"","date":"2026-08-15","home_elo":1595,"away_elo":1414,"ridge_pred":-14.4,"lgbm_pred":-10.7,"ensemble_pred":-12.0,"squiggle_line":-24.1,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Adelaide Crows","away_team":"GWS Giants","venue":"","date":"2026-08-22","home_elo":1561,"away_elo":1660,"ridge_pred":-9.0,"lgbm_pred":6.6,"ensemble_pred":1.2,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Collingwood","away_team":"Brisbane","venue":"","date":"2026-08-22","home_elo":1567,"away_elo":1705,"ridge_pred":4.4,"lgbm_pred":-11.7,"ensemble_pred":-6.1,"squiggle_line":1.1,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Carlton","away_team":"Fremantle","venue":"","date":"2026-08-22","home_elo":1414,"away_elo":1512,"ridge_pred":11.5,"lgbm_pred":7.9,"ensemble_pred":9.2,"squiggle_line":0.3,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Essendon","away_team":"Port Adelaide","venue":"","date":"2026-08-22","home_elo":1330,"away_elo":1429,"ridge_pred":-10.5,"lgbm_pred":8.9,"ensemble_pred":2.1,"squiggle_line":1.7,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Geelong Cats","away_team":"Richmond","venue":"","date":"2026-08-22","home_elo":1536,"away_elo":1261,"ridge_pred":-38.2,"lgbm_pred":-15.0,"ensemble_pred":-23.1,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Melbourne","away_team":"Western Bulldogs","venue":"","date":"2026-08-22","home_elo":1384,"away_elo":1595,"ridge_pred":6.3,"lgbm_pred":1.1,"ensemble_pred":2.9,"squiggle_line":17.1,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"St Kilda","away_team":"Gold Coast Suns","venue":"","date":"2026-08-22","home_elo":1546,"away_elo":1532,"ridge_pred":21.3,"lgbm_pred":1.4,"ensemble_pred":8.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"Sydney Swans","away_team":"North Melbourne","venue":"","date":"2026-08-22","home_elo":1628,"away_elo":1340,"ridge_pred":-40.0,"lgbm_pred":-14.4,"ensemble_pred":-23.4,"squiggle_line":null,"bookie_line":null,"model_edge":null},{"round":"24","home_team":"West Coast Eagles","away_team":"Hawthorn","venue":"","date":"2026-08-22","home_elo":1304,"away_elo":1696,"ridge_pred":-15.0,"lgbm_pred":-13.8,"ensemble_pred":-14.2,"squiggle_line":null,"bookie_line":null,"model_edge":null}],"strategies":[{"id":"home_underdog","name":"Home Underdog","cat":"baseline","desc":"Back the home team on the line whenever they are the underdog (positive home line).","check":"home_line > 0","side":"home","historical_roi":2.72,"conditions":{"home_line_min":0,"home_line_min_exclusive":true},"needs_unavailable":[]},{"id":"close_lines_home","name":"Close Lines \u00b13 Back Home","cat":"baseline","desc":"Back the home team when the line is between -3 and +3 points.","check":"-3 <= home_line <= 3","side":"home","historical_roi":15.9,"conditions":{"home_line_min":-3,"home_line_min_exclusive":false,"home_line_max":3},"needs_unavailable":[]},{"id":"home_dog_saturday","name":"Home Dog + Saturday","cat":"home_dog","desc":"Back the home underdog only on Saturday. Bigger crowds, louder support.","check":"home_line > 0 AND day == Saturday","side":"home","historical_roi":8.27,"conditions":{"home_line_min":0,"home_line_min_exclusive":true,"day":"Saturday"},"needs_unavailable":[]},{"id":"home_dog_line_lengthened","name":"Home Dog + Line Lengthened","cat":"home_dog","desc":"Back home underdog when the line drifted further against them (>1pt from open). Market overreaction.","check":"home_line > 0 AND line_movement < -1","side":"home","historical_roi":7.57,"conditions":{"home_line_min":0,"home_line_min_exclusive":true},"needs_unavailable":["line_movement"]},{"id":"home_dog_rested","name":"Home Dog + Rested \u22658d","cat":"home_dog","desc":"Back home underdog when they had 8+ days since last game. Fresh legs + crowd = edge.","check":"home_line > 0 AND home_break >= 8","side":"home","historical_roi":10.6,"conditions":{"home_line_min":0,"home_line_min_exclusive":true},"needs_unavailable":["break_days"]},{"id":"home_dog_small","name":"Home Dog + Small Line \u226412.5","cat":"home_dog","desc":"Back the home underdog when the line is 12.5 or less. Competitive home teams.","check":"0 < home_line <= 12.5","side":"home","historical_roi":5.53,"conditions":{"home_line_min":0,"home_line_min_exclusive":true,"home_line_max":12.5},"needs_unavailable":[]},{"id":"home_dog_big","name":"Home Dog + Big Line >24.5","cat":"home_dog","desc":"Back the home underdog when the line is >24.5. Heavy underdogs at home cover 57%+.","check":"home_line > 24.5","side":"home","historical_roi":9.02,"conditions":{"home_line_min":24.5,"home_line_min_exclusive":true},"needs_unavailable":[]},{"id":"home_dog_neg_form","name":"Home Dog + Negative Form Edge","cat":"home_dog","desc":"Back home underdog when their form is worse than opponent. Market overweights recent form.","check":"home_line > 0 AND home_l5m - away_l5m <= 0","side":"home","historical_roi":3.67,"conditions":{"home_line_min":0,"home_line_min_exclusive":true},"needs_unavailable":["form_data"]},{"id":"home_dog_sat_line","name":"Home Dog + Sat + Line Lengthened","cat":"combo","desc":"Triple edge: Saturday + home underdog + line drifted against them. 60.5% SR historically.","check":"home_line > 0 AND Saturday AND line_movement < -1","side":"home","historical_roi":15.3,"conditions":{"home_line_min":0,"home_line_min_exclusive":true,"day":"Saturday"},"needs_unavailable":["line_movement"]},{"id":"close_steam_home","name":"Close \u00b13 + Steam Towards Home","cat":"close","desc":"Back home in close games where line moved >0.5pt towards home. Smart money.","check":"-3 <= home_line <= 3 AND line_movement > 0.5","side":"home","historical_roi":11.42,"conditions":{"home_line_min":-3,"home_line_min_exclusive":false,"home_line_max":3},"needs_unavailable":["line_movement"]},{"id":"close_night","name":"Close \u00b13 + Fri/Thu Night","cat":"close","desc":"Back home in close prime-time night games. Crowd factor amplified under lights.","check":"-3 <= home_line <= 3 AND day in [Thu, Fri]","side":"home","historical_roi":15.57,"conditions":{"home_line_min":-3,"home_line_min_exclusive":false,"home_line_max":3,"day_in":["Thursday","Friday"]},"needs_unavailable":[]},{"id":"close_home_cold","name":"Close \u00b13 + Home Cold (L3W\u22641)","cat":"close","desc":"Back home in close games when home team is out of form. Market overreacts to cold streaks.","check":"-3 <= home_line <= 3 AND home_l3w <= 1","side":"home","historical_roi":12.39,"conditions":{"home_line_min":-3,"home_line_min_exclusive":false,"home_line_max":3},"needs_unavailable":["form_data"]},{"id":"cold_fav_small","name":"Cold Fav \u226412.5 (Back Fav Line)","cat":"cold_fav","desc":"INVERSE: Back the favourite line when fav has won \u22641 of last 3. Cold favourites bounce back hard \u2014 market overreacts.","check":"fav_line <= 12.5 AND fav_l3w <= 1","side":"fav","historical_roi":9.9,"conditions":{},"needs_unavailable":["form_data"]},{"id":"cold_fav_home","name":"Cold Fav \u226412.5 at HOME","cat":"cold_fav","desc":"Back cold home favourite. Home advantage fuels the bounce-back. 59.6% SR.","check":"home is fav AND home_line >= -12.5 AND home_l3w <= 1","side":"home","historical_roi":9.02,"conditions":{"home_is_fav":true},"needs_unavailable":["form_data"]},{"id":"cold_fav_rested","name":"Cold Fav \u226412.5 + Rested \u22658d","cat":"cold_fav","desc":"Back cold favourite when they've had 8+ days rest. Time to reset after losses.","check":"fav_line <= 12.5 AND fav_l3w <= 1 AND fav_break >= 8","side":"fav","historical_roi":5.58,"conditions":{},"needs_unavailable":["break_days","form_data"]},{"id":"with_away_short","name":"With Away on Short Break \u22645d","cat":"turnaround","desc":"Back the away team when THEY are on short break. Market overpenalises \u2014 they cover 58%.","check":"away_break <= 5","side":"away","historical_roi":10.94,"conditions":{},"needs_unavailable":["break_days"]},{"id":"combo_dog_rested_sat","name":"COMBO: Home Dog + Rested \u22658d + Sat","cat":"combo","desc":"Triple stack: rested home underdog on Saturday. 70% SR on 20 bets. The ultimate edge.","check":"home_line > 0 AND home_break >= 8 AND Saturday","side":"home","historical_roi":33.31,"conditions":{"home_line_min":0,"home_line_min_exclusive":true,"day":"Saturday"},"needs_unavailable":["break_days"]},{"id":"combo_cold_fav_home_rested","name":"COMBO: Cold Fav HOME + Rested","cat":"combo","desc":"Rested cold home favourite. At home, rested, due a bounce. 58.1% SR.","check":"home is fav AND home_line >= -12.5 AND home_l3w <= 1 AND home_break >= 8","side":"home","historical_roi":11.35,"conditions":{"home_is_fav":true},"needs_unavailable":["break_days","form_data"]}]};
+
+const TEAM_COLORS = {
+    'Adelaide Crows':'#ffcc00','Brisbane':'#c9507a','Carlton':'#7bafd4','Collingwood':'#ffffff',
+    'Essendon':'#cc2031','Fremantle':'#9b59b6','Geelong Cats':'#ffffff','Gold Coast Suns':'#d4a843',
+    'GWS Giants':'#f15c22','Hawthorn':'#f5a623','Melbourne':'#cc2031','North Melbourne':'#4a90d9',
+    'Port Adelaide':'#00b2a9','Richmond':'#ffd204','St Kilda':'#ed0f05','Sydney Swans':'#ed171f',
+    'West Coast Eagles':'#f7c948','Western Bulldogs':'#4a90d9'
+};
+const TEAM_ABBR = {
+    'Adelaide Crows':'ADE','Brisbane':'BRI','Carlton':'CAR','Collingwood':'COL',
+    'Essendon':'ESS','Fremantle':'FRE','Geelong Cats':'GEE','Gold Coast Suns':'GCS',
+    'GWS Giants':'GWS','Hawthorn':'HAW','Melbourne':'MEL','North Melbourne':'NTH',
+    'Port Adelaide':'PTA','Richmond':'RIC','St Kilda':'STK','Sydney Swans':'SYD',
+    'West Coast Eagles':'WCE','Western Bulldogs':'WBD'
+};
+const CAT_COLORS = { baseline:'#f59e0b', home_dog:'#3fb950', close:'#58a6ff', cold_fav:'#8b5cf6', turnaround:'#06b6d4', combo:'#f97316' };
+
+function teamCol(n) { return TEAM_COLORS[n] || '#c9d1d9'; }
+function abbr(n) { return TEAM_ABBR[n] || n.slice(0,3).toUpperCase(); }
+function sign(v) { if (v == null) return '—'; return (v > 0 ? '+' : '') + v.toFixed(1); }
+function fmt(v, d=1) { return v == null ? '—' : v.toFixed(d); }
+
+let selectedTier = 'all';
+let selectedGame = null;
+
+// Strategy trigger evaluation
+function evaluateStrategies(game) {
+    const hl = game.bookie_line; // home line from TAB
+    if (hl == null) return [];
+    const dayName = new Date(game.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+    
+    return DATA.strategies.map(s => {
+        const c = s.conditions;
+        let matches = true;
+        let partial = s.needs_unavailable.length > 0;
+        
+        // Check home_line conditions
+        if (c.home_line_min !== undefined) {
+            if (c.home_line_min_exclusive) {
+                if (hl <= c.home_line_min) matches = false;
+            } else {
+                if (hl < c.home_line_min) matches = false;
+            }
+        }
+        if (c.home_line_max !== undefined) {
+            if (hl > c.home_line_max) matches = false;
+        }
+        
+        // Check day conditions
+        if (c.day && dayName !== c.day) matches = false;
+        if (c.day_in && !c.day_in.includes(dayName)) matches = false;
+        
+        // Check home_is_fav (home line must be negative)
+        if (c.home_is_fav && hl > 0) matches = false;
+        
+        // If any unavailable condition exists, mark as partial
+        if (s.needs_unavailable.length > 0) {
+            // We can't fully evaluate, but available conditions match
+            return matches ? { ...s, status: 'partial' } : null;
+        }
+        
+        return matches ? { ...s, status: 'full' } : null;
+    }).filter(Boolean);
+}
+
+function assignTier(game) {
+    const minEdge = parseFloat(document.getElementById('filter-min-edge').value);
+    const hasEdge = game.model_edge != null && Math.abs(game.model_edge) >= minEdge;
+    const triggered = evaluateStrategies(game);
+    const fullStrategies = triggered.filter(s => s.status === 'full');
+    const partialStrategies = triggered.filter(s => s.status === 'partial');
+    const hasStrategy = fullStrategies.length > 0;
+    
+    let tier;
+    if (hasEdge && hasStrategy) tier = 'dual';
+    else if (hasEdge) tier = 'edge';
+    else if (hasStrategy) tier = 'strategy';
+    else tier = null;
+    
+    return { tier, triggered, fullStrategies, partialStrategies, hasEdge, game };
+}
+
+function pickCellHTML(r) {
+    if (r.model_edge == null) return '<td class="pick-cell"><div class="pick-content" style="color:var(--text-dim)">—</div></td>';
+    const abs = Math.abs(r.model_edge);
+    const valTeam = r.model_edge < 0 ? r.home_team : r.away_team;
+    const valLine = r.model_edge < 0 ? r.bookie_line : -r.bookie_line;
+    const col = teamCol(valTeam);
+    const pct = Math.min(abs / 30 * 100, 100);
+    const opacity = (0.08 + (abs / 30) * 0.35).toFixed(2);
+    return `<td class="pick-cell">
+        <div class="pick-bar" style="width:${pct}%;background:var(--green);opacity:${opacity}"></div>
+        <div class="pick-content">
+            <span class="pick-abbr" style="color:${col}">${abbr(valTeam)}</span>
+            <span class="pick-line">${sign(valLine)}</span>
+            <span class="pick-edge">${abs.toFixed(1)} pt edge</span>
+        </div>
+    </td>`;
+}
+
+function tierBadge(tier) {
+    if (tier === 'dual') return '<span class="tier-badge dual">DUAL SIGNAL</span>';
+    if (tier === 'edge') return '<span class="tier-badge edge">EDGE ONLY</span>';
+    if (tier === 'strategy') return '<span class="tier-badge strategy">STRATEGY ONLY</span>';
+    return '';
+}
+
+function stratTags(triggered) {
+    const full = triggered.filter(s => s.status === 'full');
+    if (full.length === 0) return '<span style="color:var(--text-dim);font-size:12px">—</span>';
+    return '<div class="strat-tags">' + full.map(s =>
+        `<span class="strat-tag active">${s.name}</span>`
+    ).join('') + '</div>';
+}
+
+function showDetail(idx) {
+    if (selectedGame === idx) {
+        selectedGame = null;
+        document.getElementById('game-detail').classList.add('hidden');
+        return;
+    }
+    selectedGame = idx;
+    const item = tieredGames[idx];
+    const g = item.game;
+    const panel = document.getElementById('game-detail');
+    panel.classList.remove('hidden');
+    
+    const valTeam = g.model_edge < 0 ? g.home_team : g.away_team;
+    const valLine = g.model_edge < 0 ? g.bookie_line : -g.bookie_line;
+    
+    let stratHTML = '';
+    if (item.fullStrategies.length > 0) {
+        stratHTML = '<div class="strat-detail-list"><h4 style="font-size:13px;color:var(--text-dim);margin-bottom:8px">TRIGGERED STRATEGIES</h4>';
+        item.fullStrategies.forEach(s => {
+            stratHTML += `<div class="strat-detail-item">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h4 style="color:${CAT_COLORS[s.cat] || '#c9d1d9'}">${s.name}</h4>
+                    <span class="strat-roi">+${s.historical_roi}% ROI</span>
+                </div>
+                <p>${s.desc}</p>
+                <p style="margin-top:4px;font-size:11px;color:var(--text-dim)">Condition: ${s.check}</p>
+            </div>`;
+        });
+        stratHTML += '</div>';
+    }
+    
+    panel.innerHTML = `
+        <div class="game-detail-header">
+            <h3><span style="color:${teamCol(g.home_team)}">${g.home_team}</span> vs <span style="color:${teamCol(g.away_team)}">${g.away_team}</span></h3>
+            <div style="display:flex;align-items:center;gap:12px">
+                ${tierBadge(item.tier)}
+                <span style="font-size:12px;color:var(--text-dim)">${g.date}</span>
+                <button class="close-detail" onclick="showDetail(${idx})">Close</button>
+            </div>
+        </div>
+        <div class="game-detail-body">
+            <div class="detail-stats">
+                <div class="detail-stat">
+                    <div class="stat-label">Model</div>
+                    <div class="stat-value" style="color:var(--accent)">${sign(g.ensemble_pred)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="stat-label">TAB Line</div>
+                    <div class="stat-value" style="color:var(--text-dim)">${sign(g.bookie_line)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="stat-label">Edge</div>
+                    <div class="stat-value" style="color:${teamCol(valTeam)}">${abbr(valTeam)} ${Math.abs(g.model_edge).toFixed(1)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="stat-label">Value Pick</div>
+                    <div class="stat-value" style="color:${teamCol(valTeam)};font-size:16px">${abbr(valTeam)} ${sign(valLine)}</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="stat-label">Strategies</div>
+                    <div class="stat-value" style="font-size:16px">${item.fullStrategies.length}</div>
+                </div>
+            </div>
+            ${stratHTML}
+        </div>
+    `;
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+let tieredGames = [];
+
+function render() {
+    const roundSel = document.getElementById('filter-round');
+    const selectedRound = roundSel ? roundSel.value : 'all';
+    
+    let games = DATA.predictions.filter(g => g.bookie_line != null);
+    if (selectedRound !== 'all') games = games.filter(g => g.round === selectedRound);
+    
+    // Assign tiers
+    tieredGames = games.map(g => assignTier(g)).filter(item => item.tier != null);
+    
+    // Sort: dual first, then edge, then strategy; within tier sort by abs edge desc
+    const tierOrder = { dual: 0, edge: 1, strategy: 2 };
+    tieredGames.sort((a, b) => {
+        if (tierOrder[a.tier] !== tierOrder[b.tier]) return tierOrder[a.tier] - tierOrder[b.tier];
+        return Math.abs(b.game.model_edge || 0) - Math.abs(a.game.model_edge || 0);
+    });
+    
+    // Filter by selected tier
+    let visible = selectedTier === 'all' ? tieredGames : tieredGames.filter(item => item.tier === selectedTier);
+    
+    // Counts
+    const dualCount = tieredGames.filter(i => i.tier === 'dual').length;
+    const edgeCount = tieredGames.filter(i => i.tier === 'edge').length;
+    const stratCount = tieredGames.filter(i => i.tier === 'strategy').length;
+    
+    // KPIs
+    const strongest = tieredGames.length > 0 ? tieredGames.reduce((best, i) => Math.abs(i.game.model_edge || 0) > Math.abs(best.game.model_edge || 0) ? i : best) : null;
+    const strongestTeam = strongest ? (strongest.game.model_edge < 0 ? strongest.game.home_team : strongest.game.away_team) : null;
+    
+    document.getElementById('kpis').innerHTML =
+        `<div class="kpi"><div class="kpi-label">Dual Signal</div><div class="kpi-value" style="color:var(--accent)">${dualCount}</div><div class="kpi-sub">Both models agree</div></div>` +
+        `<div class="kpi"><div class="kpi-label">Edge Only</div><div class="kpi-value" style="color:var(--green)">${edgeCount}</div><div class="kpi-sub">Statistical model</div></div>` +
+        `<div class="kpi"><div class="kpi-label">Strategy Only</div><div class="kpi-value" style="color:var(--amber)">${stratCount}</div><div class="kpi-sub">Pattern match</div></div>` +
+        `<div class="kpi"><div class="kpi-label">Strongest Edge</div><div class="kpi-value" style="color:${strongestTeam ? teamCol(strongestTeam) : 'var(--text-dim)'}">${strongest ? abbr(strongestTeam) + ' ' + Math.abs(strongest.game.model_edge).toFixed(1) : '—'}</div><div class="kpi-sub">${strongest ? strongest.game.home_team + ' v ' + strongest.game.away_team : ''}</div></div>`;
+    
+    // Tier filter buttons
+    document.getElementById('tier-btns').innerHTML =
+        `<button class="tier-btn ${selectedTier==='all'?'active':''}" onclick="setTier('all')">All<span class="count">(${tieredGames.length})</span></button>` +
+        `<button class="tier-btn ${selectedTier==='dual'?'active':''}" onclick="setTier('dual')" style="${selectedTier==='dual'?'border-color:var(--accent)':''}">Dual Signal<span class="count">(${dualCount})</span></button>` +
+        `<button class="tier-btn ${selectedTier==='edge'?'active':''}" onclick="setTier('edge')" style="${selectedTier==='edge'?'border-color:var(--green)':''}">Edge Only<span class="count">(${edgeCount})</span></button>` +
+        `<button class="tier-btn ${selectedTier==='strategy'?'active':''}" onclick="setTier('strategy')" style="${selectedTier==='strategy'?'border-color:var(--amber)':''}">Strategy Only<span class="count">(${stratCount})</span></button>`;
+    
+    // Table
+    let th = '<thead><tr><th>Date</th><th>Home</th><th>Away</th><th>TAB Line</th><th>Pick</th><th>Strategies</th><th>Confidence</th></tr></thead>';
+    let tb = '<tbody>';
+    if (visible.length === 0) {
+        tb += '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:30px">No games match the current filters. Try adjusting the round or edge threshold.</td></tr>';
+    } else {
+        visible.forEach((item, idx) => {
+            const g = item.game;
+            const globalIdx = tieredGames.indexOf(item);
+            const tierClass = item.tier === 'dual' ? 'tier-dual' : item.tier === 'edge' ? 'tier-edge' : 'tier-strategy';
+            tb += `<tr class="tier-row ${tierClass}" onclick="showDetail(${globalIdx})">
+                <td>${g.date}</td>
+                <td style="font-weight:700;color:${teamCol(g.home_team)}">${g.home_team}</td>
+                <td style="font-weight:700;color:${teamCol(g.away_team)}">${g.away_team}</td>
+                <td style="color:var(--text-dim)">${sign(g.bookie_line)}</td>
+                ${pickCellHTML(g)}
+                <td>${stratTags(item.triggered)}</td>
+                <td>${tierBadge(item.tier)}</td>
+            </tr>`;
+        });
+    }
+    tb += '</tbody>';
+    document.getElementById('mainTable').innerHTML = th + tb;
+}
+
+function setTier(t) {
+    selectedTier = t;
+    selectedGame = null;
+    document.getElementById('game-detail').classList.add('hidden');
+    render();
+}
+
+function sortRounds(rounds) {
+    return rounds.sort((a, b) => { const na = a==='OR' ? 0 : parseInt(a); const nb = b==='OR' ? 0 : parseInt(b); return na - nb; });
+}
+
+function init() {
+    const rounds = sortRounds([...new Set(DATA.predictions.map(r => r.round))]);
+    const roundSel = document.getElementById('filter-round');
+    roundSel.innerHTML = '<option value="all">All Rounds</option>';
+    rounds.forEach(v => { const o = document.createElement('option'); o.value=v; o.textContent=v==='OR'?'Opening Round':'Round '+v; roundSel.appendChild(o); });
+    if (rounds.length > 0) roundSel.value = rounds[0];
+    render();
+}
+init();
+</script>
+<script>
+(function() {
+    const path = location.pathname;
+    if (path.includes('edge_model')) document.getElementById('nav-edge').classList.add('active');
+    else if (path.includes('strategy_playbook')) document.getElementById('nav-strat').classList.add('active');
+    else if (path.includes('combined_view')) document.getElementById('nav-combined').classList.add('active');
+    else document.getElementById('nav-combined').classList.add('active');
+})();
+</script>
+</body>
+</html>

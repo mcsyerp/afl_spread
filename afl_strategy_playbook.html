@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0f1117;--card:#1a1d2e;--border:#1f2937;--border2:#374151;--text:#e0e0e0;--muted:#9ca3af;--dim:#6b7280;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4}
+:root{--bg:#0d1117;--card:#161b22;--bg-card:#161b22;--border:#30363d;--border2:#374151;--text:#c9d1d9;--text-dim:#8b949e;--muted:#8b949e;--dim:#6b7280;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--amber:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .dash{max-width:1500px;margin:0 auto;padding:20px}
 header{margin-bottom:20px}
@@ -101,11 +101,53 @@ tr.clickable:hover td{background:#2a2d45}
   #betPanel .bet-filters button{padding:6px 12px;font-size:.78rem}
   .bet-summary{flex-wrap:wrap;gap:8px}
 }
+
+.nav-bar{background:linear-gradient(135deg,#1a1f35 0%,#0d1117 100%);border-bottom:1px solid var(--border);padding:14px 0;position:sticky;top:0;z-index:100}
+.nav-inner{max-width:1500px;margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap}
+.nav-brand{font-size:16px;font-weight:700;color:var(--text);white-space:nowrap}
+.nav-links{display:flex;gap:8px}
+.nav-link{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:all 0.2s}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+.nav-link.active{color:var(--accent);background:rgba(88,166,255,0.1)}
+.nav-meta{font-size:12px;color:var(--muted);white-space:nowrap}
+/* This Round section */
+.this-round-section { border:1px solid var(--accent); background:rgba(88,166,255,0.03); border-radius:10px; padding:20px; margin-bottom:20px; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.round-game { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-bottom:10px; }
+.round-game:last-child { margin-bottom:0; }
+.round-game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.round-game-teams { font-size:15px; font-weight:600; }
+.round-game-meta { font-size:12px; color:var(--text-dim); display:flex; gap:12px; align-items:center; }
+.round-game-line { font-size:13px; color:var(--accent); font-weight:600; }
+.round-game-strats { display:flex; flex-wrap:wrap; gap:6px; }
+.round-strat-tag { padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600; background:rgba(63,185,80,0.12); color:var(--green); border:1px solid rgba(63,185,80,0.25); }
+.round-strat-roi { font-size:11px; color:var(--text-dim); margin-left:4px; }
+.round-no-signal { font-size:13px; color:var(--text-dim); font-style:italic; }
 </style>
 </head>
 <body>
+<nav class="nav-bar">
+<div class="nav-inner">
+<div class="nav-brand">AFL Betting Dashboard</div>
+<div class="nav-links">
+<a href="afl_edge_model.html" class="nav-link" id="nav-edge">Edge Model</a>
+<a href="afl_strategy_playbook.html" class="nav-link" id="nav-strat">Strategy Playbook</a>
+<a href="afl_combined_view.html" class="nav-link" id="nav-combined">Combined View</a>
+</div>
+<div class="nav-meta">Season 2026</div>
+</div>
+</nav>
 <div class="dash">
-<header><h1>AFL Line Betting — Strategy Playbook <span>2020–2025 · $1,000 stakes · 29 strategies · Click any row to see all bets</span></h1></header>
+<header><h1 style="font-size:1.3rem">Strategy Playbook <span>2020–2025 · $1,000 stakes · Click any row to see all bets</span></h1></header>
+
+
+<div class="section this-round-section" id="thisRoundSection">
+  <h3 style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
+    Opening Round — Strategy Signals
+  </h3>
+  <div id="thisRoundGames"></div>
+</div>
 
 <div class="filters">
   <label>Category:</label>
@@ -342,7 +384,91 @@ function update(){const d=filtered();renderKPIs(d);renderROI(d);renderScatter(d)
 document.getElementById('catFilter').addEventListener('change',update);
 document.getElementById('minBets').addEventListener('change',update);
 document.querySelectorAll('#tbl th').forEach(th=>{th.addEventListener('click',()=>{const c=th.dataset.c;if(sC===c)sD=sD==='asc'?'desc':'asc';else{sC=c;sD='desc';}update();});});
+
+// === THIS ROUND: Upcoming games + strategy signals ===
+const ROUND_GAMES = [
+    { home: 'Sydney Swans', away: 'Carlton', date: '2026-03-05', day: 'Thursday', tab_line: -22.5 },
+    { home: 'Gold Coast Suns', away: 'Geelong Cats', date: '2026-03-06', day: 'Friday', tab_line: -3.5 },
+    { home: 'GWS Giants', away: 'Hawthorn', date: '2026-03-07', day: 'Saturday', tab_line: 10.5 },
+    { home: 'Brisbane', away: 'Western Bulldogs', date: '2026-03-07', day: 'Saturday', tab_line: -16.5 },
+    { home: 'St Kilda', away: 'Collingwood', date: '2026-03-08', day: 'Sunday', tab_line: 4.5 }
+];
+
+const STRAT_DEFS = [
+    { id:'home_underdog', name:'Home Underdog', cat:'baseline', roi:2.72, side:'home',
+      check: function(hl,day){ return hl > 0; } },
+    { id:'close_lines_home', name:'Close Lines \u00b13 Back Home', cat:'baseline', roi:15.9, side:'home',
+      check: function(hl,day){ return hl >= -3 && hl <= 3; } },
+    { id:'home_dog_saturday', name:'Home Dog + Saturday', cat:'home_dog', roi:8.27, side:'home',
+      check: function(hl,day){ return hl > 0 && day === 'Saturday'; } },
+    { id:'home_dog_small', name:'Home Dog + Small Line \u226412.5', cat:'home_dog', roi:5.53, side:'home',
+      check: function(hl,day){ return hl > 0 && hl <= 12.5; } },
+    { id:'home_dog_big', name:'Home Dog + Big Line >24.5', cat:'home_dog', roi:9.02, side:'home',
+      check: function(hl,day){ return hl > 24.5; } },
+    { id:'close_night', name:'Close \u00b13 + Fri/Thu Night', cat:'close', roi:15.57, side:'home',
+      check: function(hl,day){ return hl >= -3 && hl <= 3 && (day === 'Thursday' || day === 'Friday'); } }
+];
+
+const TEAM_COLORS_R = {
+    'Adelaide Crows':'#ffcc00','Brisbane':'#c9507a','Carlton':'#7bafd4','Collingwood':'#ffffff',
+    'Essendon':'#cc2031','Fremantle':'#9b59b6','Geelong Cats':'#ffffff','Gold Coast Suns':'#d4a843',
+    'GWS Giants':'#f15c22','Hawthorn':'#f5a623','Melbourne':'#cc2031','North Melbourne':'#4a90d9',
+    'Port Adelaide':'#00b2a9','Richmond':'#ffd204','St Kilda':'#ed0f05','Sydney Swans':'#ed171f',
+    'West Coast Eagles':'#f7c948','Western Bulldogs':'#4a90d9'
+};
+function tCol(n){ return TEAM_COLORS_R[n] || '#c9d1d9'; }
+
+function renderThisRound() {
+    const container = document.getElementById('thisRoundGames');
+    let html = '';
+    ROUND_GAMES.forEach(g => {
+        const hl = g.tab_line;
+        const triggered = STRAT_DEFS.filter(s => s.check(hl, g.day));
+        const signStr = hl > 0 ? '+' + hl : String(hl);
+        
+        let stratHTML = '';
+        if (triggered.length > 0) {
+            stratHTML = '<div class="round-game-strats">' + triggered.map(s =>
+                '<span class="round-strat-tag" style="background:rgba(' + 
+                (s.cat === 'baseline' ? '245,158,11' : s.cat === 'home_dog' ? '63,185,80' : '88,166,255') + 
+                ',0.12);color:' + (CAT_COLORS[s.cat] || '#c9d1d9') + ';border-color:' + 
+                (CAT_COLORS[s.cat] || '#c9d1d9') + '">' + s.name + 
+                '<span class="round-strat-roi">+' + s.roi + '%</span></span>'
+            ).join('') + '</div>';
+        } else {
+            stratHTML = '<div class="round-no-signal">No strategy signals for this match</div>';
+        }
+        
+        html += '<div class="round-game' + (triggered.length > 0 ? ' has-signal' : '') + '">' +
+            '<div class="round-game-header">' +
+                '<div class="round-game-teams">' +
+                    '<span style="color:' + tCol(g.home) + '">' + g.home + '</span>' +
+                    ' <span style="color:var(--text-dim);font-weight:400">vs</span> ' +
+                    '<span style="color:' + tCol(g.away) + '">' + g.away + '</span>' +
+                '</div>' +
+                '<div class="round-game-meta">' +
+                    '<span>' + g.day + ' ' + g.date + '</span>' +
+                    '<span class="round-game-line">TAB ' + signStr + '</span>' +
+                '</div>' +
+            '</div>' +
+            stratHTML +
+        '</div>';
+    });
+    container.innerHTML = html;
+}
+renderThisRound();
+
 update();renderCatChart();
+</script>
+
+<script>
+(function(){
+    const path=location.pathname;
+    if(path.includes('edge_model'))document.getElementById('nav-edge').classList.add('active');
+    else if(path.includes('strategy_playbook'))document.getElementById('nav-strat').classList.add('active');
+    else if(path.includes('combined_view'))document.getElementById('nav-combined').classList.add('active');
+    else document.getElementById('nav-strat').classList.add('active');
+})();
 </script>
 </body>
 </html>
