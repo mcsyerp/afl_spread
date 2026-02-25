@@ -129,6 +129,7 @@ tbody tr:last-child td { border-bottom:none; }
         <span style="color:var(--accent)">● Dual Signal</span> — Both the statistical model <em>and</em> a backtested pattern strategy point to the same bet. These are your highest-conviction selections.<br>
         <span style="color:var(--green)">● Edge Only</span> — The model finds value but no historical pattern confirms it. Still worth considering, especially on large edges (8+ pts).<br>
         <span style="color:var(--amber)">● Strategy Only</span> — A pattern triggers but the model doesn't see enough edge. Treat as lower confidence.<br>
+        <span style="color:var(--text-dim)">● Model Tip</span> — No TAB line entered yet. Shows the model's predicted margin only. Enter TAB lines on the Edge Model page to unlock edge analysis.<br>
         Click any row to see the full breakdown of which strategies triggered and why.
     </div>
 
@@ -234,30 +235,46 @@ function assignTier(game) {
     const fullStrategies = triggered.filter(s => s.status === 'full');
     const partialStrategies = triggered.filter(s => s.status === 'partial');
     const hasStrategy = fullStrategies.length > 0;
-    
+
     let tier;
     if (hasEdge && hasStrategy) tier = 'dual';
     else if (hasEdge) tier = 'edge';
     else if (hasStrategy) tier = 'strategy';
+    else if (game.bookie_line == null) tier = 'model';
     else tier = null;
-    
+
     return { tier, triggered, fullStrategies, partialStrategies, hasEdge, game };
 }
 
 function pickCellHTML(r) {
-    if (r.model_edge == null) return '<td class="pick-cell"><div class="pick-content" style="color:var(--text-dim)">—</div></td>';
-    const abs = Math.abs(r.model_edge);
-    const valTeam = r.model_edge < 0 ? r.home_team : r.away_team;
-    const valLine = r.model_edge < 0 ? r.bookie_line : -r.bookie_line;
-    const col = teamCol(valTeam);
-    const pct = Math.min(abs / 30 * 100, 100);
-    const opacity = (0.08 + (abs / 30) * 0.35).toFixed(2);
-    return `<td class="pick-cell">
-        <div class="pick-bar" style="width:${pct}%;background:var(--green);opacity:${opacity}"></div>
-        <div class="pick-content">
-            <span class="pick-abbr" style="color:${col}">${abbr(valTeam)}</span>
-            <span class="pick-line">${sign(valLine)}</span>
+    if (r.model_edge != null) {
+        const abs = Math.abs(r.model_edge);
+        const valTeam = r.model_edge < 0 ? r.home_team : r.away_team;
+        const valLine = r.model_edge < 0 ? r.bookie_line : -r.bookie_line;
+        const col = teamCol(valTeam);
+        const pct = Math.min(abs / 30 * 100, 100);
+        const opacity = (0.08 + (abs / 30) * 0.35).toFixed(2);
+        return `<td class="pick-cell">
+            <div class="pick-bar" style="width:${pct}%;background:var(--green);opacity:${opacity}"></div>
+            <div class="pick-content">
+                <span class="pick-abbr" style="color:${col}">${abbr(valTeam)}</span>
+                <span class="pick-line">${sign(valLine)}</span>
             <span class="pick-edge">${abs.toFixed(1)} pt edge</span>
+        </div>
+    </td>`;
+    }
+    // Model-only pick (no TAB line entered yet)
+    const tipTeam = r.ensemble_pred < 0 ? r.home_team : r.away_team;
+    const tipMargin = Math.abs(r.ensemble_pred);
+    const col2 = teamCol(tipTeam);
+    const pct2 = Math.min(tipMargin / 30 * 100, 100);
+    const opacity2 = (0.08 + (tipMargin / 30) * 0.25).toFixed(2);
+    return `<td class="pick-cell">
+        <div class="pick-bar" style="width:${pct2}%;background:var(--accent);opacity:${opacity2}"></div>
+        <div class="pick-content">
+            <span class="pick-abbr" style="color:${col2}">${abbr(tipTeam)}</span>
+            <span class="pick-line">${sign(r.ensemble_pred)}</span>
+            <span class="pick-edge" style="opacity:0.5">model tip</span>
         </div>
     </td>`;
 }
@@ -266,6 +283,7 @@ function tierBadge(tier) {
     if (tier === 'dual') return '<span class="tier-badge dual">DUAL SIGNAL</span>';
     if (tier === 'edge') return '<span class="tier-badge edge">EDGE ONLY</span>';
     if (tier === 'strategy') return '<span class="tier-badge strategy">STRATEGY ONLY</span>';
+    if (tier === 'model') return '<span class="tier-badge" style="background:rgba(136,153,168,0.15);color:var(--text-dim)">MODEL TIP</span>';
     return '';
 }
 
@@ -289,9 +307,10 @@ function showDetail(idx) {
     const panel = document.getElementById('game-detail');
     panel.classList.remove('hidden');
     
-    const valTeam = g.model_edge < 0 ? g.home_team : g.away_team;
-    const valLine = g.model_edge < 0 ? g.bookie_line : -g.bookie_line;
-    
+    const hasLine = g.model_edge != null;
+    const valTeam = hasLine ? (g.model_edge < 0 ? g.home_team : g.away_team) : (g.ensemble_pred < 0 ? g.home_team : g.away_team);
+    const valLine = hasLine ? (g.model_edge < 0 ? g.bookie_line : -g.bookie_line) : null;
+
     let stratHTML = '';
     if (item.fullStrategies.length > 0) {
         stratHTML = '<div class="strat-detail-list"><h4 style="font-size:13px;color:var(--text-dim);margin-bottom:8px">TRIGGERED STRATEGIES</h4>';
@@ -325,15 +344,15 @@ function showDetail(idx) {
                 </div>
                 <div class="detail-stat">
                     <div class="stat-label">TAB Line</div>
-                    <div class="stat-value" style="color:var(--text-dim)">${sign(g.bookie_line)}</div>
+                    <div class="stat-value" style="color:var(--text-dim)">${hasLine ? sign(g.bookie_line) : '<span style="opacity:0.4">Not entered</span>'}</div>
                 </div>
                 <div class="detail-stat">
                     <div class="stat-label">Edge</div>
-                    <div class="stat-value" style="color:${teamCol(valTeam)}">${abbr(valTeam)} ${Math.abs(g.model_edge).toFixed(1)}</div>
+                    <div class="stat-value" style="color:${teamCol(valTeam)}">${hasLine ? abbr(valTeam) + ' ' + Math.abs(g.model_edge).toFixed(1) : '<span style="opacity:0.4">—</span>'}</div>
                 </div>
                 <div class="detail-stat">
-                    <div class="stat-label">Value Pick</div>
-                    <div class="stat-value" style="color:${teamCol(valTeam)};font-size:16px">${abbr(valTeam)} ${sign(valLine)}</div>
+                    <div class="stat-label">Model Tip</div>
+                    <div class="stat-value" style="color:${teamCol(valTeam)};font-size:16px">${abbr(valTeam)} by ${Math.abs(g.ensemble_pred).toFixed(1)}</div>
                 </div>
                 <div class="detail-stat">
                     <div class="stat-label">Strategies</div>
@@ -352,17 +371,19 @@ function render() {
     const roundSel = document.getElementById('filter-round');
     const selectedRound = roundSel ? roundSel.value : 'all';
     
-    let games = DATA.predictions.filter(g => g.bookie_line != null);
+    let games = DATA.predictions.slice();
     if (selectedRound !== 'all') games = games.filter(g => g.round === selectedRound);
-    
+
     // Assign tiers
     tieredGames = games.map(g => assignTier(g)).filter(item => item.tier != null);
     
-    // Sort: dual first, then edge, then strategy; within tier sort by abs edge desc
-    const tierOrder = { dual: 0, edge: 1, strategy: 2 };
+    // Sort: dual first, then edge, then strategy, then model; within tier sort by abs margin desc
+    const tierOrder = { dual: 0, edge: 1, strategy: 2, model: 3 };
     tieredGames.sort((a, b) => {
         if (tierOrder[a.tier] !== tierOrder[b.tier]) return tierOrder[a.tier] - tierOrder[b.tier];
-        return Math.abs(b.game.model_edge || 0) - Math.abs(a.game.model_edge || 0);
+        const aVal = a.game.model_edge != null ? Math.abs(a.game.model_edge) : Math.abs(a.game.ensemble_pred || 0);
+        const bVal = b.game.model_edge != null ? Math.abs(b.game.model_edge) : Math.abs(b.game.ensemble_pred || 0);
+        return bVal - aVal;
     });
     
     // Filter by selected tier
@@ -372,39 +393,55 @@ function render() {
     const dualCount = tieredGames.filter(i => i.tier === 'dual').length;
     const edgeCount = tieredGames.filter(i => i.tier === 'edge').length;
     const stratCount = tieredGames.filter(i => i.tier === 'strategy').length;
+    const modelCount = tieredGames.filter(i => i.tier === 'model').length;
     
     // KPIs
-    const strongest = tieredGames.length > 0 ? tieredGames.reduce((best, i) => Math.abs(i.game.model_edge || 0) > Math.abs(best.game.model_edge || 0) ? i : best) : null;
+    const withEdges = tieredGames.filter(i => i.game.model_edge != null);
+    const strongest = withEdges.length > 0
+        ? withEdges.reduce((best, i) => Math.abs(i.game.model_edge) > Math.abs(best.game.model_edge) ? i : best)
+        : null;
     const strongestTeam = strongest ? (strongest.game.model_edge < 0 ? strongest.game.home_team : strongest.game.away_team) : null;
-    
+
+    // Strongest model prediction (when no TAB lines yet)
+    const biggestTip = tieredGames.length > 0
+        ? tieredGames.reduce((best, i) => Math.abs(i.game.ensemble_pred || 0) > Math.abs(best.game.ensemble_pred || 0) ? i : best)
+        : null;
+    const bigTipTeam = biggestTip ? (biggestTip.game.ensemble_pred < 0 ? biggestTip.game.home_team : biggestTip.game.away_team) : null;
+
+    const edgeKPI = strongest
+        ? `<div class="kpi"><div class="kpi-label">Strongest Edge</div><div class="kpi-value" style="color:${teamCol(strongestTeam)}">${abbr(strongestTeam)} ${Math.abs(strongest.game.model_edge).toFixed(1)}</div><div class="kpi-sub">${strongest.game.home_team} v ${strongest.game.away_team}</div></div>`
+        : `<div class="kpi"><div class="kpi-label">Biggest Model Tip</div><div class="kpi-value" style="color:${bigTipTeam ? teamCol(bigTipTeam) : 'var(--text-dim)'}">${biggestTip ? abbr(bigTipTeam) + ' ' + Math.abs(biggestTip.game.ensemble_pred).toFixed(1) : '—'}</div><div class="kpi-sub">${biggestTip ? biggestTip.game.home_team + ' v ' + biggestTip.game.away_team : ''}</div></div>`;
+
     document.getElementById('kpis').innerHTML =
+        `<div class="kpi"><div class="kpi-label">Total Games</div><div class="kpi-value" style="color:var(--accent)">${tieredGames.length}</div><div class="kpi-sub">${modelCount > 0 ? modelCount + ' awaiting TAB lines' : 'All have lines'}</div></div>` +
         `<div class="kpi"><div class="kpi-label">Dual Signal</div><div class="kpi-value" style="color:var(--accent)">${dualCount}</div><div class="kpi-sub">Both models agree</div></div>` +
-        `<div class="kpi"><div class="kpi-label">Edge Only</div><div class="kpi-value" style="color:var(--green)">${edgeCount}</div><div class="kpi-sub">Statistical model</div></div>` +
-        `<div class="kpi"><div class="kpi-label">Strategy Only</div><div class="kpi-value" style="color:var(--amber)">${stratCount}</div><div class="kpi-sub">Pattern match</div></div>` +
-        `<div class="kpi"><div class="kpi-label">Strongest Edge</div><div class="kpi-value" style="color:${strongestTeam ? teamCol(strongestTeam) : 'var(--text-dim)'}">${strongest ? abbr(strongestTeam) + ' ' + Math.abs(strongest.game.model_edge).toFixed(1) : '—'}</div><div class="kpi-sub">${strongest ? strongest.game.home_team + ' v ' + strongest.game.away_team : ''}</div></div>`;
+        `<div class="kpi"><div class="kpi-label">Edge + Strategy</div><div class="kpi-value" style="color:var(--green)">${edgeCount + stratCount}</div><div class="kpi-sub">${edgeCount} edge / ${stratCount} strategy</div></div>` +
+        edgeKPI;
     
     // Tier filter buttons
     document.getElementById('tier-btns').innerHTML =
         `<button class="tier-btn ${selectedTier==='all'?'active':''}" onclick="setTier('all')">All<span class="count">(${tieredGames.length})</span></button>` +
         `<button class="tier-btn ${selectedTier==='dual'?'active':''}" onclick="setTier('dual')" style="${selectedTier==='dual'?'border-color:var(--accent)':''}">Dual Signal<span class="count">(${dualCount})</span></button>` +
         `<button class="tier-btn ${selectedTier==='edge'?'active':''}" onclick="setTier('edge')" style="${selectedTier==='edge'?'border-color:var(--green)':''}">Edge Only<span class="count">(${edgeCount})</span></button>` +
-        `<button class="tier-btn ${selectedTier==='strategy'?'active':''}" onclick="setTier('strategy')" style="${selectedTier==='strategy'?'border-color:var(--amber)':''}">Strategy Only<span class="count">(${stratCount})</span></button>`;
+        `<button class="tier-btn ${selectedTier==='strategy'?'active':''}" onclick="setTier('strategy')" style="${selectedTier==='strategy'?'border-color:var(--amber)':''}">Strategy Only<span class="count">(${stratCount})</span></button>` +
+        `<button class="tier-btn ${selectedTier==='model'?'active':''}" onclick="setTier('model')" style="${selectedTier==='model'?'border-color:var(--text-dim)':''}">Model Tip<span class="count">(${modelCount})</span></button>`;
     
     // Table
-    let th = '<thead><tr><th>Date</th><th>Home</th><th>Away</th><th>TAB Line</th><th>Pick</th><th>Strategies</th><th>Confidence</th></tr></thead>';
+    let th = '<thead><tr><th>Date</th><th>Home</th><th>Away</th><th>Model</th><th>TAB Line</th><th>Pick</th><th>Strategies</th><th>Confidence</th></tr></thead>';
     let tb = '<tbody>';
     if (visible.length === 0) {
-        tb += '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:30px">No games match the current filters. Try adjusting the round or edge threshold.</td></tr>';
+        tb += '<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:30px">No games match the current filters. Try adjusting the round or edge threshold.</td></tr>';
     } else {
         visible.forEach((item, idx) => {
             const g = item.game;
             const globalIdx = tieredGames.indexOf(item);
-            const tierClass = item.tier === 'dual' ? 'tier-dual' : item.tier === 'edge' ? 'tier-edge' : 'tier-strategy';
+            const tierClass = item.tier === 'dual' ? 'tier-dual' : item.tier === 'edge' ? 'tier-edge' : item.tier === 'model' ? '' : 'tier-strategy';
             tb += `<tr class="tier-row ${tierClass}" onclick="showDetail(${globalIdx})">
                 <td>${g.date}</td>
                 <td style="font-weight:700;color:${teamCol(g.home_team)}">${g.home_team}</td>
                 <td style="font-weight:700;color:${teamCol(g.away_team)}">${g.away_team}</td>
-                <td style="color:var(--text-dim)">${sign(g.bookie_line)}</td>
+                <td class="val-plain">${sign(g.ensemble_pred)}</td>
+                <td style="color:var(--text-dim)">${g.bookie_line != null ? sign(g.bookie_line) : '<span style="opacity:0.4">—</span>'}</td>
                 ${pickCellHTML(g)}
                 <td>${stratTags(item.triggered)}</td>
                 <td>${tierBadge(item.tier)}</td>
