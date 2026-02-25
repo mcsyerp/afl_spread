@@ -57,6 +57,7 @@ tbody tr:last-child td { border-bottom:none; }
 .tier-row { cursor:pointer; transition:background 0.15s; }
 .tier-row:hover { background:var(--bg-card-hover) !important; }
 .tier-dual { border-left:4px solid var(--accent); background:rgba(88,166,255,0.04); }
+.tier-conflict { border-left:4px solid #ef4444; background:rgba(239,68,68,0.04); }
 .tier-edge { border-left:4px solid var(--green); }
 .tier-strategy { border-left:4px solid var(--amber); }
 
@@ -126,7 +127,8 @@ tbody tr:last-child td { border-bottom:none; }
 <div class="container">
     <div class="info-box" style="font-size:12px;line-height:1.7;color:var(--text-dim)">
         <strong style="color:var(--text)">How to use this page:</strong> Games are ranked by confidence tier based on how many models agree.<br>
-        <span style="color:var(--accent)">● Dual Signal</span> — Both the statistical model <em>and</em> a backtested pattern strategy point to the same bet. These are your highest-conviction selections.<br>
+        <span style="color:var(--accent)">● Dual Signal</span> — Both the statistical model <em>and</em> a backtested pattern strategy point to the <strong>same side</strong>. Highest-conviction selections.<br>
+        <span style="color:#ef4444">● Conflict</span> — The model edge and a strategy both trigger but point to <strong>opposite sides</strong>. Proceed with caution — signals are fighting each other.<br>
         <span style="color:var(--green)">● Edge Only</span> — The model finds value but no historical pattern confirms it. Still worth considering, especially on large edges (8+ pts).<br>
         <span style="color:var(--amber)">● Strategy Only</span> — A pattern triggers but the model doesn't see enough edge. Treat as lower confidence.<br>
         <span style="color:var(--text-dim)">● Model Tip</span> — No TAB line entered yet. Shows the model's predicted margin only. Enter TAB lines on the Edge Model page to unlock edge analysis.<br>
@@ -236,14 +238,31 @@ function assignTier(game) {
     const partialStrategies = triggered.filter(s => s.status === 'partial');
     const hasStrategy = fullStrategies.length > 0;
 
+    // Which side does the edge favour? model_edge < 0 = home, > 0 = away
+    const edgeSide = game.model_edge != null ? (game.model_edge < 0 ? 'home' : 'away') : null;
+
+    // True dual signal: edge and at least one strategy must back the SAME side
+    let strategiesAgree = false;
+    if (hasEdge && hasStrategy && edgeSide) {
+        strategiesAgree = fullStrategies.some(s => {
+            if (s.side === edgeSide) return true;
+            if (s.side === 'fav') {
+                const favSide = game.bookie_line < 0 ? 'home' : 'away';
+                return favSide === edgeSide;
+            }
+            return false;
+        });
+    }
+
     let tier;
-    if (hasEdge && hasStrategy) tier = 'dual';
+    if (hasEdge && hasStrategy && strategiesAgree) tier = 'dual';
+    else if (hasEdge && hasStrategy) tier = 'conflict';
     else if (hasEdge) tier = 'edge';
     else if (hasStrategy) tier = 'strategy';
     else if (game.bookie_line == null) tier = 'model';
     else tier = null;
 
-    return { tier, triggered, fullStrategies, partialStrategies, hasEdge, game };
+    return { tier, triggered, fullStrategies, partialStrategies, hasEdge, game, edgeSide };
 }
 
 function pickCellHTML(r) {
@@ -281,6 +300,7 @@ function pickCellHTML(r) {
 
 function tierBadge(tier) {
     if (tier === 'dual') return '<span class="tier-badge dual">DUAL SIGNAL</span>';
+    if (tier === 'conflict') return '<span class="tier-badge" style="background:rgba(239,68,68,0.15);color:#ef4444">CONFLICT</span>';
     if (tier === 'edge') return '<span class="tier-badge edge">EDGE ONLY</span>';
     if (tier === 'strategy') return '<span class="tier-badge strategy">STRATEGY ONLY</span>';
     if (tier === 'model') return '<span class="tier-badge" style="background:rgba(136,153,168,0.15);color:var(--text-dim)">MODEL TIP</span>';
@@ -378,7 +398,7 @@ function render() {
     tieredGames = games.map(g => assignTier(g)).filter(item => item.tier != null);
     
     // Sort: dual first, then edge, then strategy, then model; within tier sort by abs margin desc
-    const tierOrder = { dual: 0, edge: 1, strategy: 2, model: 3 };
+    const tierOrder = { dual: 0, conflict: 1, edge: 2, strategy: 3, model: 4 };
     tieredGames.sort((a, b) => {
         if (tierOrder[a.tier] !== tierOrder[b.tier]) return tierOrder[a.tier] - tierOrder[b.tier];
         const aVal = a.game.model_edge != null ? Math.abs(a.game.model_edge) : Math.abs(a.game.ensemble_pred || 0);
@@ -391,6 +411,7 @@ function render() {
     
     // Counts
     const dualCount = tieredGames.filter(i => i.tier === 'dual').length;
+    const conflictCount = tieredGames.filter(i => i.tier === 'conflict').length;
     const edgeCount = tieredGames.filter(i => i.tier === 'edge').length;
     const stratCount = tieredGames.filter(i => i.tier === 'strategy').length;
     const modelCount = tieredGames.filter(i => i.tier === 'model').length;
@@ -422,6 +443,7 @@ function render() {
     document.getElementById('tier-btns').innerHTML =
         `<button class="tier-btn ${selectedTier==='all'?'active':''}" onclick="setTier('all')">All<span class="count">(${tieredGames.length})</span></button>` +
         `<button class="tier-btn ${selectedTier==='dual'?'active':''}" onclick="setTier('dual')" style="${selectedTier==='dual'?'border-color:var(--accent)':''}">Dual Signal<span class="count">(${dualCount})</span></button>` +
+        `<button class="tier-btn ${selectedTier==='conflict'?'active':''}" onclick="setTier('conflict')" style="${selectedTier==='conflict'?'border-color:#ef4444':''}">Conflict<span class="count">(${conflictCount})</span></button>` +
         `<button class="tier-btn ${selectedTier==='edge'?'active':''}" onclick="setTier('edge')" style="${selectedTier==='edge'?'border-color:var(--green)':''}">Edge Only<span class="count">(${edgeCount})</span></button>` +
         `<button class="tier-btn ${selectedTier==='strategy'?'active':''}" onclick="setTier('strategy')" style="${selectedTier==='strategy'?'border-color:var(--amber)':''}">Strategy Only<span class="count">(${stratCount})</span></button>` +
         `<button class="tier-btn ${selectedTier==='model'?'active':''}" onclick="setTier('model')" style="${selectedTier==='model'?'border-color:var(--text-dim)':''}">Model Tip<span class="count">(${modelCount})</span></button>`;
@@ -435,7 +457,7 @@ function render() {
         visible.forEach((item, idx) => {
             const g = item.game;
             const globalIdx = tieredGames.indexOf(item);
-            const tierClass = item.tier === 'dual' ? 'tier-dual' : item.tier === 'edge' ? 'tier-edge' : item.tier === 'model' ? '' : 'tier-strategy';
+            const tierClass = item.tier === 'dual' ? 'tier-dual' : item.tier === 'conflict' ? 'tier-conflict' : item.tier === 'edge' ? 'tier-edge' : item.tier === 'model' ? '' : 'tier-strategy';
             tb += `<tr class="tier-row ${tierClass}" onclick="showDetail(${globalIdx})">
                 <td>${g.date}</td>
                 <td style="font-weight:700;color:${teamCol(g.home_team)}">${g.home_team}</td>
