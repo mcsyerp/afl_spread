@@ -397,13 +397,31 @@ document.getElementById('minBets').addEventListener('change',update);
 document.querySelectorAll('#tbl th').forEach(th=>{th.addEventListener('click',()=>{const c=th.dataset.c;if(sC===c)sD=sD==='asc'?'desc':'asc';else{sC=c;sD='desc';}update();});});
 
 // === THIS ROUND: Upcoming games + strategy signals ===
+// Default fixture — TAB lines will be overridden from localStorage (synced from Edge Model)
 const ROUND_GAMES = [
-    { home: 'Sydney Swans', away: 'Carlton', date: '2026-03-05', day: 'Thursday', tab_line: -22.5 },
-    { home: 'Gold Coast Suns', away: 'Geelong Cats', date: '2026-03-06', day: 'Friday', tab_line: -3.5 },
-    { home: 'GWS Giants', away: 'Hawthorn', date: '2026-03-07', day: 'Saturday', tab_line: 10.5 },
-    { home: 'Brisbane', away: 'Western Bulldogs', date: '2026-03-07', day: 'Saturday', tab_line: -16.5 },
-    { home: 'St Kilda', away: 'Collingwood', date: '2026-03-08', day: 'Sunday', tab_line: 4.5 }
+    { home: 'Sydney', away: 'Carlton', date: '2026-03-05', day: 'Thursday', tab_line: null },
+    { home: 'Gold Coast', away: 'Geelong', date: '2026-03-06', day: 'Friday', tab_line: null },
+    { home: 'GWS Giants', away: 'Hawthorn', date: '2026-03-07', day: 'Saturday', tab_line: null },
+    { home: 'Brisbane', away: 'Western Bulldogs', date: '2026-03-07', day: 'Saturday', tab_line: null },
+    { home: 'St Kilda', away: 'Collingwood', date: '2026-03-08', day: 'Sunday', tab_line: null }
 ];
+
+// Load TAB lines from localStorage (shared with Edge Model page)
+function loadTABLines() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('afl_tab_lines') || '{}');
+        let loaded = 0;
+        ROUND_GAMES.forEach(g => {
+            const key = 'OR|' + g.home + '|' + g.away;
+            if (saved[key] != null) {
+                g.tab_line = saved[key];
+                loaded++;
+            }
+        });
+        if (loaded > 0) console.log('Strategy Playbook: loaded ' + loaded + ' TAB lines from Edge Model');
+    } catch(e) {}
+}
+loadTABLines();
 
 const STRAT_DEFS = [
     { id:'home_underdog', name:'Home Underdog', cat:'baseline', roi:2.72, side:'home',
@@ -421,11 +439,11 @@ const STRAT_DEFS = [
 ];
 
 const TEAM_COLORS_R = {
-    'Adelaide Crows':'#ffcc00','Brisbane':'#c9507a','Carlton':'#7bafd4','Collingwood':'#ffffff',
-    'Essendon':'#cc2031','Fremantle':'#9b59b6','Geelong Cats':'#ffffff','Gold Coast Suns':'#d4a843',
+    'Adelaide':'#ffcc00','Brisbane':'#c9507a','Carlton':'#7bafd4','Collingwood':'#ffffff',
+    'Essendon':'#cc2031','Fremantle':'#9b59b6','Geelong':'#ffffff','Gold Coast':'#d4a843',
     'GWS Giants':'#f15c22','Hawthorn':'#f5a623','Melbourne':'#cc2031','North Melbourne':'#4a90d9',
-    'Port Adelaide':'#00b2a9','Richmond':'#ffd204','St Kilda':'#ed0f05','Sydney Swans':'#ed171f',
-    'West Coast Eagles':'#f7c948','Western Bulldogs':'#4a90d9'
+    'Port Adelaide':'#00b2a9','Richmond':'#ffd204','St Kilda':'#ed0f05','Sydney':'#ed171f',
+    'West Coast':'#f7c948','Western Bulldogs':'#4a90d9'
 };
 function tCol(n){ return TEAM_COLORS_R[n] || '#c9d1d9'; }
 
@@ -434,16 +452,19 @@ function renderThisRound() {
     let html = '';
     ROUND_GAMES.forEach(g => {
         const hl = g.tab_line;
-        const triggered = STRAT_DEFS.filter(s => s.check(hl, g.day));
-        const signStr = hl > 0 ? '+' + hl : String(hl);
-        
+        const hasLine = hl != null;
+        const triggered = hasLine ? STRAT_DEFS.filter(s => s.check(hl, g.day)) : [];
+        const signStr = hasLine ? (hl > 0 ? '+' + hl : String(hl)) : 'No line';
+
         let stratHTML = '';
-        if (triggered.length > 0) {
+        if (!hasLine) {
+            stratHTML = '<div class="round-no-signal">No TAB line entered — pull lines on the Edge Model page</div>';
+        } else if (triggered.length > 0) {
             stratHTML = '<div class="round-game-strats">' + triggered.map(s =>
-                '<span class="round-strat-tag" style="background:rgba(' + 
-                (s.cat === 'baseline' ? '245,158,11' : s.cat === 'home_dog' ? '63,185,80' : '88,166,255') + 
-                ',0.12);color:' + (CAT_COLORS[s.cat] || '#c9d1d9') + ';border-color:' + 
-                (CAT_COLORS[s.cat] || '#c9d1d9') + '">' + s.name + 
+                '<span class="round-strat-tag" style="background:rgba(' +
+                (s.cat === 'baseline' ? '245,158,11' : s.cat === 'home_dog' ? '63,185,80' : '88,166,255') +
+                ',0.12);color:' + (CAT_COLORS[s.cat] || '#c9d1d9') + ';border-color:' +
+                (CAT_COLORS[s.cat] || '#c9d1d9') + '">' + s.name +
                 '<span class="round-strat-roi">+' + s.roi + '%</span></span>'
             ).join('') + '</div>';
         } else {
