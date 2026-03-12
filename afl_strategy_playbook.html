@@ -144,7 +144,7 @@ tr.clickable:hover td{background:#2a2d45}
 <div class="section this-round-section" id="thisRoundSection">
   <h3 style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
     <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite"></span>
-    Opening Round — Strategy Signals
+    Round 1 — Strategy Signals
   </h3>
   <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.5">
     Strategies that can be fully evaluated with current data are shown below. Games with multiple triggered strategies have historically been more profitable. 
@@ -399,12 +399,16 @@ document.querySelectorAll('#tbl th').forEach(th=>{th.addEventListener('click',()
 // === THIS ROUND: Upcoming games + strategy signals ===
 // Default fixture — TAB lines will be overridden from localStorage (synced from Edge Model)
 const ROUND_GAMES = [
-    { home: 'Sydney', away: 'Carlton', date: '2026-03-05', day: 'Thursday', tab_line: null },
-    { home: 'Gold Coast', away: 'Geelong', date: '2026-03-06', day: 'Friday', tab_line: null },
-    { home: 'GWS Giants', away: 'Hawthorn', date: '2026-03-07', day: 'Saturday', tab_line: null },
-    { home: 'Brisbane', away: 'Western Bulldogs', date: '2026-03-07', day: 'Saturday', tab_line: null },
-    { home: 'St Kilda', away: 'Collingwood', date: '2026-03-08', day: 'Sunday', tab_line: null }
-];
+            { home: 'Carlton', away: 'Richmond', date: '2026-03-12', day: 'Thursday', tab_line: null },
+            { home: 'Hawthorn', away: 'Essendon', date: '2026-03-13', day: 'Friday', tab_line: null },
+            { home: 'Western Bulldogs', away: 'GWS Giants', date: '2026-03-14', day: 'Saturday', tab_line: null },
+            { home: 'Geelong', away: 'Fremantle', date: '2026-03-14', day: 'Saturday', tab_line: null },
+            { home: 'Sydney', away: 'Brisbane', date: '2026-03-14', day: 'Saturday', tab_line: null },
+            { home: 'Collingwood', away: 'Adelaide', date: '2026-03-14', day: 'Saturday', tab_line: null },
+            { home: 'North Melbourne', away: 'Port Adelaide', date: '2026-03-15', day: 'Sunday', tab_line: null },
+            { home: 'Melbourne', away: 'St Kilda', date: '2026-03-15', day: 'Sunday', tab_line: null },
+            { home: 'Gold Coast', away: 'West Coast', date: '2026-03-15', day: 'Sunday', tab_line: null }
+        ];
 
 // Load TAB lines from localStorage (shared with Edge Model page)
 function loadTABLines() {
